@@ -12,7 +12,7 @@ cd ANNA
 ```
 then, on Linux:
 ```
-g++ main.cpp ANNA.hpp -O3 -o anna && chnmod +x anna && ./anna
+g++ main.cpp ANNA.hpp -O3 -o anna && chmod +x anna && ./anna
 ```
 or, if you're on Windows:
 ```
