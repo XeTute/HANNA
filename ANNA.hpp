@@ -13,7 +13,7 @@
 
 // ANNA = Asadullah's Neural Network Architecture
 
-typedef long long counter; // Yall can thank OpenMP for not allowing unsigned types
+typedef long long int counter; // Yall can thank OpenMP for not allowing unsigned types
 
 namespace XTTNNC // XeTute Technologies NN Collection
 {
@@ -200,12 +200,12 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 			ccn = scale[d_layers];
 			counter ddl = d_layers - 1;
+#pragma omp parallel for
 			for (counter n = 0; n < ccn; ++n)
 			{
 				counter mnl = scale[ddl];
 				neuron_value[d_layers][n] = prec(0.0f);
 
-#pragma omp parallel for
 				for (counter nl = 0; nl < mnl; ++nl)
 					neuron_value[d_layers][n] += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
 				neuron_value[d_layers][n] = sigmoid(neuron_value[d_layers][n]);
@@ -245,24 +245,25 @@ namespace XTTNNC // XeTute Technologies NN Collection
 			}
 
 			// Applying the changes
+#pragma omp parallel for
 			for (counter n = 0; n < mn; ++n)
 			{
-#pragma omp parallel for
 				for (counter nl = 0; nl < ddl; ++nl) // nl neuron last layer
 					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
 			}
 
+#pragma omp parallel for
 			for (counter l = ddl; l > 0; --l)
 			{
 				mn = scale[l];
-#pragma omp parallel for
 				for (counter n = 0; n < mn; ++n)
 				{
 					neuron_bias[l][n] += delta[l][n] * lr;
 
 					counter dl = l - 1;
 					counter mnl = scale[dl];
-					for (counter nl = 0; nl < mnl; ++nl)
+
+					for (counter nl = 0; nl < mnl; ++nl) //nl neuron last layer
 						weight[dl][nl][n] += neuron_value[dl][nl] * delta[l][n] * lr;
 				}
 			}
