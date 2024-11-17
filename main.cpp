@@ -12,7 +12,7 @@ typedef high_resolution_clock hdc; // high res clock
 
 int main()
 {
-	std::vector<counter> scale = { 2, 10, 5, 1 };
+	std::vector<counter> scale = { 2, 20, 10, 5, 1 }; // Doesn't have to be that large, but will 100% learn correctly.
 	ANNA<float> myNet(scale, 6);
 
 	Timepoint timepoint[2] = { hdc::now() };
@@ -26,8 +26,7 @@ int main()
 	}
 	catch (const std::exception& e) { std::cout << "Error: " << e.what() << "\nDidn't load model - Will train one from scratch.\n"; }
 	
-
-	myNet.lr = float(0.25);
+	myNet.lr = float(0.175);
 
 	std::vector<std::vector<std::vector<float>>> data =
 	{
@@ -36,7 +35,7 @@ int main()
 	};
 	counter md = data[0].size();
 
-	for (counter e = 0; e < 7000; ++e) // 10.000
+	for (counter e = 0; e < 10000; ++e)
 	{
 		for (counter s = 0; s < md; ++s)
 		{
