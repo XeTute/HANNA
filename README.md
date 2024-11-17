@@ -12,11 +12,11 @@ cd ANNA
 ```
 then, on Linux:
 ```
-g++ main.cpp ANNA.hpp -O3 -o anna && chmod +x anna && ./anna
+g++ main.cpp ANNA.hpp -O3 -fopenmp -o anna && chmod +x anna && ./anna
 ```
 or, if you're on Windows:
 ```
-g++ main.cpp ANNA.hpp -O3 -o anna.exe
+g++ main.cpp ANNA.hpp -O3 -fopenmp -o anna.exe
 ./anna.exe
 ```
 This will download, compile and execute the latest main.cpp found on this GitHub repo.
