@@ -19,7 +19,7 @@ or, if you're on Windows:
 g++ -D__USE_MINGW_ANSI_STDIO=0 main.cpp ANNA.hpp -O3 -fopenmp -o anna.exe -D__USE_MINGW_ANSI_STDIO=0
 ./anna.exe
 ```
-**IF YOU'RE ON WINDOWS; WE STRONGLY RECOMMEND USING THE MSVC COMPILER. THE EXECUTEABLE PRODUCED BY MSVC WILL BE FASTER THAN G++ BY MORE THAN 20 TIMES!**
+**IF YOU'RE ON WINDOWS; WE STRONGLY RECOMMEND USING THE MSVC COMPILER. THE EXECUTEABLE PRODUCED BY MSVC WILL BE FASTER THAN G++ BY MORE THAN 20 TIMES!**<br>
 This will download, compile and execute the latest main.cpp found on this GitHub repo.
 
 # Star History
