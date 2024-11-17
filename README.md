@@ -10,16 +10,16 @@ First,
 git clone https://github.com/XeTute/ANNA
 cd ANNA
 ```
-then, on Linux:
+then, on Linux, you can run `car.sh`(compile and run), or
 ```
 g++ -D__USE_MINGW_ANSI_STDIO=0 -O3 -Ofast -march=native -mtune=native -flto -fomit-frame-pointer -funroll-loops -ffast-math -fopenmp -fwhole-program -fno-exceptions -fno-rtti -fexceptions main.cpp ANNA.hpp -o anna
 chmod +x anna
 ./anna
 ```
-or, if you're on Windows
+or, if you're on Windows, you can run `car.bat`, or
 ```
 g++ -D__USE_MINGW_ANSI_STDIO=0 -O3 -Ofast -march=native -mtune=native -flto -fomit-frame-pointer -funroll-loops -ffast-math -fopenmp -fwhole-program -fno-exceptions -fno-rtti -fexceptions main.cpp ANNA.hpp -o anna.exe
-./anna.exe
+anna.exe
 ```
 This will download, compile and execute the latest main.cpp found on this GitHub repo.
 
