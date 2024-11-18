@@ -13,7 +13,7 @@
 
 // ANNA = Asadullah's Neural Network Architecture
 
-typedef long long int counter; // Yall can thank OpenMP for not allowing unsigned types
+typedef __int64 counter; // Yall can thank OpenMP for not allowing unsigned types
 
 namespace XTTNNC // XeTute Technologies NN Collection
 {
@@ -136,7 +136,7 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 		void load(std::string path)
 		{
-			std::ifstream r(path, std::ios::binary);
+			std::ifstream r(path);
 			if (r.is_open())
 			{
 				{ // Read scale
@@ -157,21 +157,31 @@ namespace XTTNNC // XeTute Technologies NN Collection
 						else buffer[1] += buffer[0][i];
 					}
 					for (counter i = 0; i < ms; ++i) std::cout << scale[i] << '\n';
-				}
+					this->init(scale);
 
+					r = std::ifstream(path, std::ios::binary);
+					std::getline(r, buffer[0]);
+				}
 				size_t sv = sizeof(prec); // sv = size variable
 
-				for (counter neuron = 0; neuron < scale[0]; ++neuron)
-					r.read((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
-
-				for (counter layer = 1; layer < d_layers; ++layer)
+				try
 				{
-					for (counter neuron = 0; neuron < scale[layer]; ++neuron)
-						r.read((char*)weight[layer][neuron].data(), weight[layer][neuron].size() * sv);
-					r.read((char*)neuron_bias[layer].data(), neuron_bias[layer].size() * sv);
-				}
+					for (counter neuron = 0; neuron < scale[0]; ++neuron)
+						r.read((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
 
-				r.close();
+					for (counter layer = 1; layer < d_layers; ++layer)
+					{
+						for (counter neuron = 0; neuron < scale[layer]; ++neuron)
+							r.read((char*)weight[layer][neuron].data(), weight[layer][neuron].size() * sv);
+						r.read((char*)neuron_bias[layer].data(), neuron_bias[layer].size() * sv);
+					}
+				}
+				catch (...)
+				{
+					r.close();
+					throw std::runtime_error(std::string("Coudn't open " + path + " to load ANNA.").c_str());
+					return;
+				}
 			}
 			else throw std::runtime_error(std::string("Coudn't open " + path + " to load ANNA.").c_str());
 		}
