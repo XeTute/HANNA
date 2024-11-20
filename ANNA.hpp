@@ -19,7 +19,7 @@ namespace XTTNNC // XeTute Technologies NN Collection
 {
 	std::random_device rd;
 	std::uniform_real_distribution<float> urd(-1.5, 1.5); // urd(rd) will return a "random" number.
-	
+
 	template <typename prec>
 	class ANNA
 	{
@@ -110,6 +110,15 @@ namespace XTTNNC // XeTute Technologies NN Collection
 			neuron_value[d_layers] = pa(scale[d_layers]);
 			delta[d_layers] = pa(scale[d_layers]);
 			neuron_bias[0] = pa(0);
+		}
+
+		counter getNParams()
+		{
+			counter rv = 0;
+			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
+			rv -= scale[0];
+			rv -= scale[d_layers];
+			return rv;
 		}
 
 		void save(std::string path)
@@ -221,7 +230,7 @@ namespace XTTNNC // XeTute Technologies NN Collection
 				neuron_value[d_layers][n] = sigmoid(neuron_value[d_layers][n]);
 			}
 		}
-		
+
 		pa getOutput() { return neuron_value[d_layers]; }
 
 		void backward(pa& eo) // eo expected output
@@ -238,9 +247,9 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 			for (counter l = ddl; l >= 0; --l)
 			{
-				counter mn = scale[l];
+				counter ml = scale[l];
 #pragma omp parallel for
-				for (counter n = 0; n < mn; ++n)
+				for (counter n = 0; n < ml; ++n)
 				{
 					prec e = prec(0.0f); // e error
 
@@ -255,6 +264,7 @@ namespace XTTNNC // XeTute Technologies NN Collection
 			}
 
 			// Applying the changes
+			mn = scale[d_layers];
 #pragma omp parallel for
 			for (counter n = 0; n < mn; ++n)
 			{
@@ -277,6 +287,26 @@ namespace XTTNNC // XeTute Technologies NN Collection
 						weight[dl][nl][n] += neuron_value[dl][nl] * delta[l][n] * lr;
 				}
 			}
+		}
+
+		prec getMSE(pa3& d) // d[0 == input, 1 == output][sample][...]
+		{
+			prec mse = 0.0f;
+			counter md = d.size();
+			pa mo;
+
+			for (counter s = 0; s < md; ++s)
+			{
+				this->forward(d[0][s]);
+				mo = this->getOutput(); // mo model output
+				counter mmo = mo.size();
+				for (counter n = 0; n < mmo; ++n)
+				{
+					prec e = d[1][s][n] - mo[n];
+					mse += e * e;
+				}
+			}
+			return mse / (md * mo.size());
 		}
 	};
 };
