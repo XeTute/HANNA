@@ -29,9 +29,8 @@ Currently, only CPUs(which support OpenMP / OMP) are supported, but we're planni
 Performance-wise, we noticed that smaller models(less than ~1k params) will train significantly faster when being single-threaded.
 For models which are larger, it makes sense to train and inference using more than one thread, while keeping the amount of threads used less than the number of cores in your processor.
 
-Compiler-wise, we noticed that MVSC may generate an executeable which will crash due to a vector access violation(especially when trying to perform backprop on a large model), which actually doesn't occur as far as we know. Please let us know if you found out that it actually is our fault.
-In cases like that, please try using the MinGW(G++) compiler. In our tests, using the MinGW compiler trained, inferenced and saved the model correctly.
-Also, if you're able to use MVSC without the executeable crashing, please use it, as it's faster on Windows platforms by a significant factor.
+Compiler-wise, we've expirienced issues on both MinGW(incompatible, Windows thinks that it generated a 16bit?), and MVSC(vector access violations when there are none).
+If you notice any issues in regards to ANNA.hpp, please issue it.
 
 # Star History
 <a href="https://star-history.com/#XeTute/ANNA&Date">
