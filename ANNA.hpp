@@ -13,10 +13,9 @@
 
 // ANNA = Asadullah's Neural Network Architecture
 
-typedef __int64 counter; // Yall can thank OpenMP for not allowing unsigned types
-
-namespace XTTNNC // XeTute Technologies NN Collection
+namespace _ANNA // XeTute Technologies NN Collection
 {
+	typedef __int64 counter; // Yall can thank OpenMP for not allowing unsigned types
 	std::random_device rd;
 	std::uniform_real_distribution<float> urd(-1.5, 1.5); // urd(rd) will return a "random" number.
 
@@ -201,11 +200,11 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 			counter ccn; // cached counter
 
+#pragma omp parallel for collapse(3)
 			for (counter l = 1; l < d_layers; ++l)
 			{
 				counter dl = l - 1;
 				ccn = scale[l];
-#pragma omp parallel for
 				for (counter n = 0; n < ccn; ++n)
 				{
 					counter mcln = scale[dl];
@@ -219,7 +218,7 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 			ccn = scale[d_layers];
 			counter ddl = d_layers - 1;
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 			for (counter n = 0; n < ccn; ++n)
 			{
 				counter mnl = scale[ddl];
@@ -245,10 +244,10 @@ namespace XTTNNC // XeTute Technologies NN Collection
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
 			}
 
+#pragma omp parallel for collapse(3)
 			for (counter l = ddl; l >= 0; --l)
 			{
 				counter ml = scale[l];
-#pragma omp parallel for
 				for (counter n = 0; n < ml; ++n)
 				{
 					prec e = prec(0.0f); // e error
@@ -265,14 +264,14 @@ namespace XTTNNC // XeTute Technologies NN Collection
 
 			// Applying the changes
 			mn = scale[d_layers];
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 			for (counter n = 0; n < mn; ++n)
 			{
 				for (counter nl = 0; nl < ddl; ++nl) // nl neuron last layer
 					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
 			}
 
-#pragma omp parallel for
+#pragma omp parallel for collapse(3)
 			for (counter l = ddl; l > 0; --l)
 			{
 				mn = scale[l];
