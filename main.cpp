@@ -15,12 +15,10 @@ typedef high_resolution_clock hdc; // high res clock
 
 int main()
 {
-	std::vector<counter> scale = { 2, 20, 10, 5, 1 }; // Doesn't have to be that large, but will 100% learn correctly.
+	std::vector<counter> scale = { 2, 20, 40, 10, 5, 1 }; // Doesn't have to be that large
 	ANNA<float> myNet;
-	myNet.setThreads(6);
+	myNet.setThreads(1);
 
-	std::cout << "Using " << omp_get_max_threads() << " threads.\n";
-	
 	myNet.lr = float(0.175);
 
 	std::vector<std::vector<std::vector<float>>> data =
@@ -35,12 +33,12 @@ int main()
 		myNet.load(PATH);
 		std::cout << "Loaded model from " << PATH << ".\n";
 	}
-	catch (const std::exception& e)
+	catch (...)
 	{
-		std::cout << "Error occurred while trying to load model from " << PATH << ": " << e.what() << ".\n";
+		std::cout << "Error occurred while trying to load model from " << PATH << ".\n";
 		myNet.init(scale);
 	}
-	
+	std::cout << "Using " << omp_get_max_threads() << " threads on " << myNet.getNParams() << " Parameters.\n";
 
 	Timepoint timepoint[2] = { hdc::now() };
 	for (counter e = 0; e < 7000; ++e)
@@ -54,17 +52,8 @@ int main()
 	timepoint[1] = hdc::now();
 	std::cout << "Took " << duration_cast<milliseconds>(timepoint[1] - timepoint[0]).count() << "ms to train.\n";
 
-	float mse = 0.0f;
-	for (counter s = 0; s < md; ++s)
-	{
-		myNet.forward(data[0][s]);
-		float o = myNet.getOutput()[0];
-		mse = std::pow((data[1][s][0] - o), 2);
-		std::cout << std::string(std::to_string(data[0][s][0]) + " | " + std::to_string(data[0][s][1]) + " || " + std::to_string(o)) << '\n';
-	}
-	std::cout << "MSE: " << mse << '\n';
-
-	myNet.save(PATH);
+	// myNet.save(PATH);
+	std::cout << "MSE: " << myNet.getMSE(data);
 
 	return 0;
 }
