@@ -15,9 +15,9 @@ typedef high_resolution_clock hdc; // high res clock
 
 int main()
 {
-	std::vector<counter> scale = { 2, 2, 1 }; // Doesn't have to be that large
+	std::vector<counter> scale = { 2, 40, 40, 40, 1 }; // Doesn't have to be that large
 	ANNA<float> myNet;
-	myNet.setThreads(6);
+	myNet.setThreads(1);
 
 	myNet.lr = float(0.175);
 
@@ -30,6 +30,7 @@ int main()
 
 	try
 	{
+		throw std::exception("");
 		myNet.load(PATH);
 		std::cout << "Loaded model from " << PATH << ".\n";
 	}
@@ -41,6 +42,7 @@ int main()
 	std::cout << "Using " << omp_get_max_threads() << " threads on " << myNet.getNParams() << " Parameters.\n";
 
 	Timepoint timepoint[2] = { hdc::now() };
+#pragma omp parallel for collapse(2)
 	for (counter e = 0; e < 70000; ++e)
 	{
 		for (counter s = 0; s < md; ++s)
@@ -52,7 +54,7 @@ int main()
 	timepoint[1] = hdc::now();
 	std::cout << "Took " << duration_cast<milliseconds>(timepoint[1] - timepoint[0]).count() << "ms to train.\n";
 
-	// myNet.save(PATH);
+	myNet.save(PATH);
 	std::cout << "MSE: " << myNet.getMSE(data);
 
 	return 0;
