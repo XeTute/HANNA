@@ -113,6 +113,8 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 		counter getNParams()
 		{
+			std::cout << "Layers: " << layers << "\nLayers - 1: " << d_layers << "\nscale.size(): " << scale.size() << '\n';
+
 			counter rv = 0;
 			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
 			rv -= scale[0];
@@ -294,6 +296,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 			counter md = d.size();
 			pa mo;
 
+#pragma omp parallel for collapse(2)
 			for (counter s = 0; s < md; ++s)
 			{
 				this->forward(d[0][s]);
