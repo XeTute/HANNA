@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <cmath>
+#include <string>
 
 #include "ANNA.hpp"
 
@@ -11,51 +12,86 @@ using namespace _ANNA;
 typedef time_point<high_resolution_clock> Timepoint;
 typedef high_resolution_clock hdc; // high res clock
 
-#define PATH "XOR.anna"
+constexpr auto PATH = "HD.anna"; // HDD heart disease
+constexpr float SEPARATOR = 33.0f;
 
 int main()
 {
-	std::vector<counter> scale = { 2, 40, 40, 40, 1 }; // Doesn't have to be that large
-	ANNA<float> myNet;
-	myNet.setThreads(1);
-
-	myNet.lr = float(0.175);
-
-	std::vector<std::vector<std::vector<float>>> data =
-	{
-		{ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
-		{ { 0 }, { 1 }, { 1 }, { 0 } }
-	};
-	counter md = data[0].size();
-
+	ANNA<float> HDN; // HDN heart disease network
+	HDN.setThreads(6);
+	HDN.lr = float(0.01); // 0.001 ~ (1 / 1025) (1025 is the amount of samples in the training data)
+	
 	try
 	{
-		throw std::exception("");
-		myNet.load(PATH);
-		std::cout << "Loaded model from " << PATH << ".\n";
+		HDN.load(PATH);
+		std::cout
+			<< "Loaded Heart Disease Network from file " << PATH
+			<< ".\nIt contains " << HDN.getNParams() << " parameters.\n";
 	}
 	catch (...)
 	{
-		std::cout << "Error occurred while trying to load model from " << PATH << ".\n";
-		myNet.init(scale);
+		HDN.init({27, 21, 15, 9, 3, 1});
+		std::cout
+			<< "Failed to load Heart Disease Network from file " << PATH
+			<< ".\nTraining from scratch, the new network contains " << HDN.getNParams() << " parameters.\n";
 	}
-	std::cout << "Using " << omp_get_max_threads() << " threads on " << myNet.getNParams() << " Parameters.\n";
 
-	Timepoint timepoint[2] = { hdc::now() };
-#pragma omp parallel for collapse(2)
-	for (counter e = 0; e < 70000; ++e)
-	{
-		for (counter s = 0; s < md; ++s)
+	std::vector<std::vector<std::vector<float>>> d(2, std::vector<std::vector<float>>()); // d dataset, d[0], input d[1] output
+
+	{ // Format dataset
+		std::vector<std::vector<float>> csv = loadCSVf("hdd.csv"); // loadCSVf ( f = float ) in _ANNA::
+
+		std::size_t ms = csv.size(); // ms max samples
+		std::size_t me = csv[0].size(); // me max elems per sample
+		std::size_t dme = csv[0].size() - 1;
+
+		d[0] = std::vector<std::vector<float>>(ms, std::vector<float>(me, 0.0f));
+		d[1] = std::vector<std::vector<float>>(ms, std::vector<float>(1, 0.0f));
+
+		for (std::size_t s = 0; s < ms; ++s)
 		{
-			myNet.forward(data[0][s]);
-			myNet.backward(data[1][s]);
+			for (std::size_t e = 0; e < dme; ++e)
+			{
+				d[0][s][e] = csv[s][e];
+				++e;
+				d[0][s][e] = SEPARATOR;
+			}
+			d[1][s][0] = csv[s][dme];
 		}
-	}
-	timepoint[1] = hdc::now();
-	std::cout << "Took " << duration_cast<milliseconds>(timepoint[1] - timepoint[0]).count() << "ms to train.\n";
 
-	myNet.save(PATH);
-	std::cout << "MSE: " << myNet.getMSE(data);
+		csv.clear();
+	}
+
+	std::size_t ms = d[0].size();
+
+	Timepoint tp[2] = { hdc::now() };
+	std::cout << "Training...\n";
+
+#pragma omp parallel for collapse(2)
+	for (std::size_t e = 0; e < 103; ++e) // 103 ~ (1025 / 10)
+	{
+		for (std::size_t s = 0; s < ms; ++s)
+		{
+			HDN.forward(d[0][s]);
+			HDN.backward(d[1][s]);
+		}
+		std::cout << "[EPOCH] " << e << '\n';
+		std::cout << "[MSE  ] " << HDN.getMSE(d) << '\n';
+	}
+	tp[1] = hdc::now();
+
+	std::cout
+		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::microseconds>(tp[1] - tp[0]).count() << "ms.\n"
+		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "ms.\n"
+		<< "Training stopped at a MSE(Mean Squared Error) of " << HDN.getMSE(d) << ".\n"
+		<< "Will attempt to save the model now...\n";
+
+	try
+	{
+		HDN.save(PATH);
+		std::cout << "Successfully saved the trained model under " << PATH << ".\n";
+	}
+	catch (...) { std::cout << "Unable to save the model under " << PATH << " =(.\n"; }
 
 	return 0;
 }
