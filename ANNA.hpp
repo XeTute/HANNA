@@ -19,6 +19,44 @@ namespace _ANNA // XeTute Technologies NN Collection
 	std::random_device rd;
 	std::uniform_real_distribution<float> urd(-1.5, 1.5); // urd(rd) will return a "random" number.
 
+	std::vector<std::vector<float>> loadCSVf(std::string path)
+	{
+		std::ifstream r(path);
+		if (!r.is_open())
+		{
+			throw std::exception(std::string("Failed to load CSV from " + path + '.').c_str());
+			return std::vector<std::vector<float>>();
+		}
+
+		{
+			std::string tmp("");
+			std::getline(r, tmp); // first line is definition
+		}
+		std::vector<std::vector<float>> converted;
+
+		while (!r.eof())
+		{
+			std::vector<float> push_value(0, 0);
+			std::string b[2];
+			std::getline(r, b[0]);
+
+			std::size_t mb0 = b[0].size();
+			for (std::size_t i = 0; i < mb0; ++i)
+			{
+				if (b[0][i] == ',')
+				{
+					push_value.push_back(std::stof(b[1]));
+					b[1].clear();
+				}
+				else b[1] += b[0][i];
+			}
+
+			converted.push_back(push_value);
+		}
+
+		return converted;
+	}
+
 	template <typename prec>
 	class ANNA
 	{
@@ -113,8 +151,6 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 		counter getNParams()
 		{
-			std::cout << "Layers: " << layers << "\nLayers - 1: " << d_layers << "\nscale.size(): " << scale.size() << '\n';
-
 			counter rv = 0;
 			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
 			rv -= scale[0];
@@ -202,11 +238,12 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			counter ccn; // cached counter
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for
 			for (counter l = 1; l < d_layers; ++l)
 			{
 				counter dl = l - 1;
 				ccn = scale[l];
+
 				for (counter n = 0; n < ccn; ++n)
 				{
 					counter mcln = scale[dl];
@@ -220,7 +257,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			ccn = scale[d_layers];
 			counter ddl = d_layers - 1;
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for
 			for (counter n = 0; n < ccn; ++n)
 			{
 				counter mnl = scale[ddl];
@@ -246,7 +283,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
 			}
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for
 			for (counter l = ddl; l >= 0; --l)
 			{
 				counter ml = scale[l];
@@ -266,14 +303,15 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			// Applying the changes
 			mn = scale[d_layers];
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for
 			for (counter n = 0; n < mn; ++n)
 			{
-				for (counter nl = 0; nl < ddl; ++nl) // nl neuron last layer
+				counter mddl = scale[ddl];
+				for (counter nl = 0; nl < mddl; ++nl) // nl neuron last layer
 					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
 			}
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for
 			for (counter l = ddl; l > 0; --l)
 			{
 				mn = scale[l];
@@ -293,10 +331,10 @@ namespace _ANNA // XeTute Technologies NN Collection
 		prec getMSE(pa3& d) // d[0 == input, 1 == output][sample][...]
 		{
 			prec mse = 0.0f;
-			counter md = d.size();
+			counter md = d[0].size();
 			pa mo;
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for reduction(+:mse) collapse(2)
 			for (counter s = 0; s < md; ++s)
 			{
 				this->forward(d[0][s]);
@@ -310,5 +348,6 @@ namespace _ANNA // XeTute Technologies NN Collection
 			}
 			return mse / (md * mo.size());
 		}
+
 	};
 };
