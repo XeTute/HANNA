@@ -234,6 +234,14 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 		void forward(pa& i) // I assume that input has the same amount of input neurons as the MLP
 		{
+#ifdef DEBUG
+			if (neuron_value[0].size() != i.size())
+			{
+				throw std::exception(std::string("ANNA: The input Tensor's size is not equal to the input layer Tensor's size.").c_str());
+				return;
+			}
+#endif // DEBUG
+
 			neuron_value[0] = i;
 
 			counter ccn; // cached counter
