@@ -13,7 +13,6 @@ typedef time_point<high_resolution_clock> Timepoint;
 typedef high_resolution_clock hdc; // high res clock
 
 constexpr auto PATH = "HD.anna"; // HDD heart disease
-constexpr float SEPARATOR = 33.0f;
 
 int main()
 {
@@ -30,7 +29,7 @@ int main()
 	}
 	catch (...)
 	{
-		HDN.init({27, 21, 15, 9, 3, 1});
+		HDN.init({13, 21, 17, 17, 9, 3, 1});
 		std::cout
 			<< "Failed to load Heart Disease Network from file " << PATH
 			<< ".\nTraining from scratch, the new network contains " << HDN.getNParams() << " parameters.\n";
@@ -50,13 +49,7 @@ int main()
 
 		for (std::size_t s = 0; s < ms; ++s)
 		{
-			for (std::size_t e = 0; e < dme; ++e)
-			{
-				d[0][s][e] = csv[s][e];
-				++e;
-				d[0][s][e] = SEPARATOR;
-			}
-			d[1][s][0] = csv[s][dme];
+			for (std::size_t e = 0; e < me; ++e) d[0][s][e] = csv[s][e];
 		}
 
 		csv.clear();
@@ -67,22 +60,20 @@ int main()
 	Timepoint tp[2] = { hdc::now() };
 	std::cout << "Training...\n";
 
-#pragma omp parallel for collapse(2)
-	for (std::size_t e = 0; e < 103; ++e) // 103 ~ (1025 / 10)
+	float mse = 0.0f;
+	for (std::size_t e = 0; (e < 103 || mse > 0.15); ++e) // 103 ~ (1025 / 10)
 	{
 		for (std::size_t s = 0; s < ms; ++s)
 		{
 			HDN.forward(d[0][s]);
 			HDN.backward(d[1][s]);
 		}
-		std::cout << "[EPOCH] " << e << '\n';
-		std::cout << "[MSE  ] " << HDN.getMSE(d) << '\n';
 	}
 	tp[1] = hdc::now();
 
 	std::cout
-		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::microseconds>(tp[1] - tp[0]).count() << "ms.\n"
-		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "ms.\n"
+		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::milliseconds>(tp[1] - tp[0]).count() << "ms.\n"
+		<< "\nTraining took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "s.\n"
 		<< "Training stopped at a MSE(Mean Squared Error) of " << HDN.getMSE(d) << ".\n"
 		<< "Will attempt to save the model now...\n";
 
