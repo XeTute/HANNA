@@ -84,5 +84,25 @@ int main()
 	}
 	catch (...) { std::cout << "Unable to save the model under " << PATH << " =(.\n"; }
 
+	HDN.forward(d[0][0]);
+	std::cout
+		<< "--- TEST INFERENCE ---\n"
+		<< "Given the input of: \n"
+		<< "- Age: " << d[0][0][0]
+		<< "\n- Sex: " << (d[0][0][1] ? "Male" : "Female")
+		<< "\n- Chest Pain Type: " << d[0][0][2]
+		<< "\n- Resting Blood Pressure (in mm Hg on admission to the hospital): " << d[0][0][3]
+		<< "\n- Serum Cholestoral in mg/dl: " << d[0][0][4]
+		<< "\n- Fasting Blood Sugar?: " << (d[0][0][5] ? "Yes" : "No")
+		<< "\n- Resting Electrocardiographic Results: " << d[0][0][6]
+		<< "\n- Maximum Heart Rate Achieved: " << d[0][0][7]
+		<< "\n- Exercise Induced Angina?: " << (d[0][0][8] ? "Yes" : "No")
+		<< "\n- ST Depression induced by Exercise relative to Rest: " << d[0][0][9]
+		<< "\n- Slope of the Peak Exercise ST Segment: " << d[0][0][10]
+		<< "\n- Number of Major Vessels(0-3) colored by Flourosopy: " << d[0][0][11]
+		<< "\n- Thal(1: Normal, 2: Fixed Defect, 3: Reversable Defect): " << d[0][0][12]
+		<< "\nThe models output was: " << HDN.getOutput()[0]
+		<< "\nThe correct output is: " << d[1][0][0] << '\n';
+
 	return 0;
 }
