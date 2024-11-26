@@ -17,7 +17,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 {
 	typedef __int64 counter; // Yall can thank OpenMP for not allowing unsigned types
 	std::random_device rd;
-	std::uniform_real_distribution<float> urd(-1.5, 1.5); // urd(rd) will return a "random" number.
+	std::mt19937 gen(rd()); // gen(rd) will return a "random" number.
 
 	std::vector<std::vector<float>> loadCSVf(std::string path)
 	{
@@ -50,6 +50,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 				}
 				else b[1] += b[0][i];
 			}
+			push_value.push_back(std::stof(b[1]));
 
 			converted.push_back(push_value);
 		}
@@ -76,7 +77,11 @@ namespace _ANNA // XeTute Technologies NN Collection
 		counter d_layers; // decreased layers, layers - 1
 		counter threads;
 
-		prec sigmoid(prec x) { return 1 / (1 + std::exp(-x)); }
+		prec sigmoid(prec x)
+		{
+			x = std::min(std::max(x, -20.0f), 20.0f); // prevent NaN, inf or other weird numbers
+			return 1 / (1 + std::exp(-x));
+		}
 		prec sigDeri(prec x)
 		{
 			prec sig = sigmoid(x);
@@ -112,7 +117,7 @@ namespace _ANNA // XeTute Technologies NN Collection
 		{
 			if (_scale.size() < 3)
 			{
-				throw std::runtime_error("ANNA requires at least total of three layers.");
+				throw std::runtime_error("ANNA requires at least a total of three layers.");
 				return;
 			}
 			scale = _scale;
@@ -126,7 +131,11 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			for (counter layer = 0; layer < d_layers; ++layer) // < d_layers for weight
 			{
-				counter neurons = scale[layer]; // will be used frequently, copy to L cache
+				counter neurons = scale[layer];
+				counter nnl = scale[layer + 1];
+
+				prec range = prec(std::sqrt(6.0 / (neurons + nnl))); // Xavier range
+				std::uniform_real_distribution<prec> dist(-range, range);
 
 				neuron_value[layer] = pa(neurons);
 				neuron_bias[layer] = pa(neurons);
@@ -136,11 +145,11 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 				for (counter neuron = 0; neuron < neurons; ++neuron)
 				{
-					neuron_bias[layer][neuron] = (prec)urd(rd);
-					weight[layer][neuron] = pa(scale[layer + 1]);
+					neuron_bias[layer][neuron] = (prec)dist(gen);
+					weight[layer][neuron] = pa(nnl);
 
-					for (counter neuron_nl = 0; neuron_nl < scale[layer + 1]; ++neuron_nl)
-						weight[layer][neuron][neuron_nl] = (prec)urd(rd);
+					for (counter neuron_nl = 0; neuron_nl < nnl; ++neuron_nl)
+						weight[layer][neuron][neuron_nl] = (prec)dist(gen);
 				}
 			}
 
