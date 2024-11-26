@@ -89,7 +89,7 @@ int main()
 		}
 		catch (...) { std::cout << "Unable to save the model under " << PATH << " =(.\n"; }
 	}
-	else std::cout << "Model is already under a MSE of 0.15 on the dataset loaded.\nWill not re-train the model, as it may lead to overfitting.\n";
+	else std::cout << "Model is already under a MSE of 0.2 on the dataset loaded.\nWill not re-train the model, as it may lead to overfitting.\n";
 
 	HDN.forward(d[0][0]);
 	std::cout
