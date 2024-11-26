@@ -110,7 +110,7 @@ namespace _ANNA
 		ANNA(std::vector<counter> _scale) { init(_scale); }
 		ANNA(std::vector<counter> _scale, counter _threads) { init(_scale); setThreads(_threads); }
 
-		void setThreads(counter _threads) { omp_set_num_threads((int)_threads); }
+		void setThreads(counter _threads) { threads = _threads; }
 
 		void init(std::vector<counter> _scale)
 		{
