@@ -296,7 +296,7 @@ namespace _ANNA
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
 			}
 
-			for (counter l = ddl; l >= 0; --l)
+			for (__int64 l = ddl; l >= 0; --l)
 			{
 				counter ml = scale[l];
 				for (counter n = 0; n < ml; ++n)
