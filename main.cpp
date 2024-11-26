@@ -19,7 +19,7 @@ int main()
 	ANNA<float> HDN; // HDN heart disease network
 	HDN.setThreads(6);
 	HDN.lr = float(0.001); // 0.001 ~ (1 / 1025) (1025 is the amount of samples in the training data)
-	
+
 	try
 	{
 		HDN.load(PATH);
@@ -91,6 +91,7 @@ int main()
 	}
 	else std::cout << "Model is already under a MSE of 0.2 on the dataset loaded.\nWill not re-train the model, as it may lead to overfitting.\n";
 
+	counter error = 0;
 	for (std::size_t s = 0; s < d[0].size(); ++s)
 	{
 		HDN.forward(d[0][s]);
@@ -110,8 +111,10 @@ int main()
 			<< "\n- Number of Major Vessels(0-3) colored by Flourosopy: " << d[0][s][11]
 			<< "\n- Thal(1: Normal, 2: Fixed Defect, 3: Reversable Defect): " << d[0][s][12]
 			<< "\nThe models output was: " << ((HDN.getOutput()[0] >= 0.5) ? "Heart Disease" : "No Heart Disease")
-			<< "\nThe correct output is: " << (HDN.getOutput()[0] ? "Heart Disease" : "No Heart Disease") << '\n';
+			<< "\nThe correct output is: " << (d[1][s][0] ? "Heart Disease" : "No Heart Disease") << '\n';
+		if (((HDN.getOutput()[0] >= 0.5) ? 1 : 0) == d[1][s][0]) ++error;
 	}
+	std::cout << "Wrong Predictions: " << error << "\nCorrect Predications: " << d[0].size() - error << '\n';
 
 	return 0;
 }
