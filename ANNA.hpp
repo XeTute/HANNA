@@ -9,13 +9,12 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <omp.h>
 
 // ANNA = Asadullah's Neural Network Architecture
 
-namespace _ANNA // XeTute Technologies NN Collection
+namespace _ANNA
 {
-	typedef __int64 counter; // Yall can thank OpenMP for not allowing unsigned types
+	typedef unsigned __int64 counter;
 	std::random_device rd;
 	std::mt19937 gen(rd()); // gen(rd) will return a "random" number.
 
@@ -253,15 +252,12 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			neuron_value[0] = i;
 
-			counter ccn; // cached counter
-
-#pragma omp parallel for
 			for (counter l = 1; l < d_layers; ++l)
 			{
 				counter dl = l - 1;
-				ccn = scale[l];
+				counter cn = scale[l];
 
-				for (counter n = 0; n < ccn; ++n)
+				for (counter n = 0; n < cn; ++n)
 				{
 					counter mcln = scale[dl];
 					neuron_value[l][n] = neuron_bias[l][n];
@@ -272,9 +268,9 @@ namespace _ANNA // XeTute Technologies NN Collection
 				}
 			}
 
-			ccn = scale[d_layers];
+			counter ccn = scale[d_layers];
 			counter ddl = d_layers - 1;
-#pragma omp parallel for
+
 			for (counter n = 0; n < ccn; ++n)
 			{
 				counter mnl = scale[ddl];
@@ -293,14 +289,13 @@ namespace _ANNA // XeTute Technologies NN Collection
 			counter mn = scale[d_layers]; // mn max neurons
 			counter ddl = d_layers - 1;
 
-#pragma omp parallel for
+
 			for (counter n = 0; n < mn; ++n)
 			{
 				prec ao = neuron_value[d_layers][n]; // caching the current neuron
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
 			}
 
-#pragma omp parallel for
 			for (counter l = ddl; l >= 0; --l)
 			{
 				counter ml = scale[l];
@@ -320,7 +315,6 @@ namespace _ANNA // XeTute Technologies NN Collection
 
 			// Applying the changes
 			mn = scale[d_layers];
-#pragma omp parallel for
 			for (counter n = 0; n < mn; ++n)
 			{
 				counter mddl = scale[ddl];
@@ -328,7 +322,6 @@ namespace _ANNA // XeTute Technologies NN Collection
 					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
 			}
 
-#pragma omp parallel for
 			for (counter l = ddl; l > 0; --l)
 			{
 				mn = scale[l];
@@ -351,7 +344,6 @@ namespace _ANNA // XeTute Technologies NN Collection
 			counter md = d[0].size();
 			pa mo;
 
-#pragma omp parallel for reduction(+:mse) collapse(2)
 			for (counter s = 0; s < md; ++s)
 			{
 				this->forward(d[0][s]);
