@@ -91,25 +91,27 @@ int main()
 	}
 	else std::cout << "Model is already under a MSE of 0.2 on the dataset loaded.\nWill not re-train the model, as it may lead to overfitting.\n";
 
-	HDN.forward(d[0][11]);
-	std::cout
-		<< "--- TEST INFERENCE ---\n"
-		<< "Given the input of: \n"
-		<< "- Age: " << d[0][11][0]
-		<< "\n- Sex: " << (d[0][11][1] ? "Male" : "Female")
-		<< "\n- Chest Pain Type: " << d[0][11][2]
-		<< "\n- Resting Blood Pressure (in mm Hg on admission to the hospital): " << d[0][11][3]
-		<< "\n- Serum Cholestoral in mg/dl: " << d[0][11][4]
-		<< "\n- Fasting Blood Sugar?: " << (d[0][11][5] ? "Yes" : "No")
-		<< "\n- Resting Electrocardiographic Results: " << d[0][11][6]
-		<< "\n- Maximum Heart Rate Achieved: " << d[0][11][7]
-		<< "\n- Exercise Induced Angina?: " << (d[0][11][8] ? "Yes" : "No")
-		<< "\n- ST Depression induced by Exercise relative to Rest: " << d[0][11][9]
-		<< "\n- Slope of the Peak Exercise ST Segment: " << d[0][11][10]
-		<< "\n- Number of Major Vessels(0-3) colored by Flourosopy: " << d[0][11][11]
-		<< "\n- Thal(1: Normal, 2: Fixed Defect, 3: Reversable Defect): " << d[0][11][12]
-		<< "\nThe models output was: " << ((HDN.getOutput()[0] >= 0.5) ? "No Heart Disease" : "Heart Disease")
-		<< "\nThe correct output is: " << (HDN.getOutput()[0] ? "Heart Disease" : "No Heart Disease") << '\n';
+	for (std::size_t s = 0; s < d[0].size(); ++s)
+	{
+		HDN.forward(d[0][s]);
+		std::cout
+			<< "\nGiven the input of: \n"
+			<< "- Age: " << d[0][s][0]
+			<< "\n- Sex: " << (d[0][s][1] ? "Male" : "Female")
+			<< "\n- Chest Pain Type: " << d[0][s][2]
+			<< "\n- Resting Blood Pressure (in mm Hg on admission to the hospital): " << d[0][s][3]
+			<< "\n- Serum Cholestoral in mg/dl: " << d[0][s][4]
+			<< "\n- Fasting Blood Sugar?: " << (d[0][s][5] ? "Yes" : "No")
+			<< "\n- Resting Electrocardiographic Results: " << d[0][s][6]
+			<< "\n- Maximum Heart Rate Achieved: " << d[0][s][7]
+			<< "\n- Exercise Induced Angina?: " << (d[0][s][8] ? "Yes" : "No")
+			<< "\n- ST Depression induced by Exercise relative to Rest: " << d[0][s][9]
+			<< "\n- Slope of the Peak Exercise ST Segment: " << d[0][s][10]
+			<< "\n- Number of Major Vessels(0-3) colored by Flourosopy: " << d[0][s][11]
+			<< "\n- Thal(1: Normal, 2: Fixed Defect, 3: Reversable Defect): " << d[0][s][12]
+			<< "\nThe models output was: " << ((HDN.getOutput()[0] >= 0.5) ? "Heart Disease" : "No Heart Disease")
+			<< "\nThe correct output is: " << (HDN.getOutput()[0] ? "Heart Disease" : "No Heart Disease") << '\n';
+	}
 
 	return 0;
 }
