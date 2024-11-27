@@ -112,7 +112,7 @@ int main()
 			<< "\n- Thal(1: Normal, 2: Fixed Defect, 3: Reversable Defect): " << d[0][s][12]
 			<< "\nThe models output was: " << ((HDN.getOutput()[0] >= 0.5) ? "Heart Disease" : "No Heart Disease")
 			<< "\nThe correct output is: " << (d[1][s][0] ? "Heart Disease" : "No Heart Disease") << '\n';
-		if (((HDN.getOutput()[0] >= 0.5) ? 1 : 0) == d[1][s][0]) ++error;
+		if (((HDN.getOutput()[0] >= 0.5) ? 1 : 0) != d[1][s][0]) ++error;
 	}
 	std::cout << "Wrong Predictions: " << error << "\nCorrect Predications: " << d[0].size() - error << '\n';
 
