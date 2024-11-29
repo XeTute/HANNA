@@ -1,7 +1,7 @@
 # ANNA
 ANNA(Asadullah's Neural Network Architecture) is our new experimental architecture which we actively develop.
 It's supposed to be a more efficient alternative to the Transformers architecture for roleplaying, story-telling and similar tasks which don't require the amount of performance as the average Transformer model offers.
-Currently, it's simply an implementation of a MLP(Multi-Layer-Perceptron) with thread support through std::thread coming soon.
+Currently, it's simply an implementation of a MLP(Multi-Layer-Perceptron) with thread support through std::async coming soon.
 
 # Getting started
 Ensure you have `git` and `g++` installed on the device you want to run following commands on.
@@ -24,10 +24,7 @@ anna.exe
 This will download, compile and execute the latest main.cpp found on this GitHub repo.
 
 # Other Notices
-Currently, only CPUs(std::thread support coming soon) are supported, but we're planning to add support for CUDA.
-
-Performance-wise, we noticed that smaller models(less than ~1k params) will train significantly faster when being single-threaded.
-For models which are larger, it makes sense to train and inference using more than one thread, while keeping the amount of threads used less than the number of cores in your processor.
+Currently, only CPUs(std::async support coming soon) are supported, but we're planning to add support for CUDA.
 
 # Star History
 <a href="https://star-history.com/#XeTute/ANNA&Date">
