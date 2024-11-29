@@ -3,14 +3,15 @@
 #endif
 
 #include <cmath>
+#include <cstdint>
 #include <fstream>
+#include <future>
 #include <iostream>
+#include <mutex>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <future>
-#include <cstdint>
 
 // ANNA = Asadullah's Neural Network Architecture
 
@@ -77,6 +78,7 @@ namespace _ANNA
 		counter layers;
 		counter d_layers; // decreased layers, layers - 1
 		counter threads;
+		counter ddl;
 
 		prec sigmoid(prec x)
 		{
@@ -124,6 +126,7 @@ namespace _ANNA
 			scale = _scale;
 			layers = scale.size();
 			d_layers = layers - 1;
+			ddl = d_layers - 1;
 
 			weight = pa3(d_layers);
 			neuron_value = pa2(layers);
@@ -271,7 +274,6 @@ namespace _ANNA
 			}
 
 			counter ccn = scale[d_layers];
-			counter ddl = d_layers - 1;
 
 			for (counter n = 0; n < ccn; ++n)
 			{
@@ -289,8 +291,6 @@ namespace _ANNA
 		void backward(pa& eo) // eo expected output
 		{
 			counter mn = scale[d_layers]; // mn max neurons
-			counter ddl = d_layers - 1;
-
 
 			for (counter n = 0; n < mn; ++n)
 			{
