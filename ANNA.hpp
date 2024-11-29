@@ -25,7 +25,7 @@ namespace _ANNA
 		std::ifstream r(path);
 		if (!r.is_open())
 		{
-			throw std::exception(std::string("Failed to load CSV from " + path + '.').c_str());
+			throw std::runtime_error(std::string("Failed to load CSV from " + path + '.').c_str());
 			return std::vector<std::vector<float>>();
 		}
 
@@ -247,7 +247,7 @@ namespace _ANNA
 #ifdef DEBUG
 			if (neuron_value[0].size() != i.size())
 			{
-				throw std::exception(std::string("ANNA: The input Tensor's size is not equal to the input layer Tensor's size.").c_str());
+				throw std::runtime_error(std::string("ANNA: The input Tensor's size is not equal to the input layer Tensor's size.").c_str());
 				return;
 			}
 #endif // DEBUG
