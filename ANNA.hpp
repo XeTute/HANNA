@@ -9,12 +9,14 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <future>
+#include <cstdint>
 
 // ANNA = Asadullah's Neural Network Architecture
 
 namespace _ANNA
 {
-	typedef unsigned __int64 counter;
+	typedef uint64_t counter;
 	std::random_device rd;
 	std::mt19937 gen(rd()); // gen(rd) will return a "random" number.
 
@@ -296,7 +298,7 @@ namespace _ANNA
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
 			}
 
-			for (__int64 l = ddl; l >= 0; --l)
+			for (int64_t l = ddl; l >= 0; --l)
 			{
 				counter ml = scale[l];
 				for (counter n = 0; n < ml; ++n)
