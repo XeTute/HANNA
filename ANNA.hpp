@@ -2,15 +2,14 @@
 #define ANNA_HPP
 #endif
 
-#include <cmath>
-#include <cstdint>
+#include <cmath> // sqrt
+#include <cstdint> // int64_t, uin64_t
 #include <fstream>
-#include <future>
 #include <iostream>
-#include <mutex>
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 // ANNA = Asadullah's Neural Network Architecture
@@ -77,8 +76,12 @@ namespace _ANNA
 
 		counter layers;
 		counter d_layers; // decreased layers, layers - 1
-		counter threads;
 		counter ddl;
+
+		counter threads;
+
+		counter inp_size;
+		counter out_size;
 
 		prec sigmoid(prec x)
 		{
@@ -105,8 +108,9 @@ namespace _ANNA
 
 			layers = 0;
 			d_layers = 0;
+			ddl = 0;
 			lr = 0.0f;
-			threads = 0;
+			threads = 1;
 
 			std::cout << "ANNA: Prepared for init.\n";
 		}
@@ -124,9 +128,14 @@ namespace _ANNA
 				return;
 			}
 			scale = _scale;
+			setThreads(1);
+
 			layers = scale.size();
 			d_layers = layers - 1;
 			ddl = d_layers - 1;
+
+			inp_size = _scale[0];
+			out_size = _scale[d_layers];
 
 			weight = pa3(d_layers);
 			neuron_value = pa2(layers);
@@ -157,18 +166,9 @@ namespace _ANNA
 				}
 			}
 
-			neuron_value[d_layers] = pa(scale[d_layers]);
-			delta[d_layers] = pa(scale[d_layers]);
+			neuron_value[d_layers] = pa(out_size);
+			delta[d_layers] = pa(out_size);
 			neuron_bias[0] = pa(0);
-		}
-
-		counter getNParams()
-		{
-			counter rv = 0;
-			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
-			rv -= scale[0];
-			rv -= scale[d_layers];
-			return rv;
 		}
 
 		void save(std::string path)
@@ -180,7 +180,7 @@ namespace _ANNA
 				w << '\n';
 
 				size_t sv = sizeof(prec); // sv = size variable
-				for (counter neuron = 0; neuron < scale[0]; ++neuron)
+				for (counter neuron = 0; neuron < inp_size; ++neuron)
 					w.write((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
 
 				for (counter layer = 1; layer < d_layers; ++layer)
@@ -225,7 +225,7 @@ namespace _ANNA
 
 				try
 				{
-					for (counter neuron = 0; neuron < scale[0]; ++neuron)
+					for (counter neuron = 0; neuron < inp_size; ++neuron)
 						r.read((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
 
 					for (counter layer = 1; layer < d_layers; ++layer)
@@ -255,7 +255,7 @@ namespace _ANNA
 			}
 #endif // DEBUG
 
-			neuron_value[0] = i;
+			for (counter j = 0; j < inp_size; ++j) neuron_value[0][j] = i[j];
 
 			for (counter l = 1; l < d_layers; ++l)
 			{
@@ -273,9 +273,7 @@ namespace _ANNA
 				}
 			}
 
-			counter ccn = scale[d_layers];
-
-			for (counter n = 0; n < ccn; ++n)
+			for (counter n = 0; n < out_size; ++n)
 			{
 				counter mnl = scale[ddl];
 				neuron_value[d_layers][n] = prec(0.0f);
@@ -290,9 +288,7 @@ namespace _ANNA
 
 		void backward(pa& eo) // eo expected output
 		{
-			counter mn = scale[d_layers]; // mn max neurons
-
-			for (counter n = 0; n < mn; ++n)
+			for (counter n = 0; n < out_size; ++n)
 			{
 				prec ao = neuron_value[d_layers][n]; // caching the current neuron
 				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
@@ -315,15 +311,14 @@ namespace _ANNA
 				}
 			}
 
-			// Applying the changes
-			mn = scale[d_layers];
-			for (counter n = 0; n < mn; ++n)
+			for (counter n = 0; n < out_size; ++n)
 			{
 				counter mddl = scale[ddl];
 				for (counter nl = 0; nl < mddl; ++nl) // nl neuron last layer
 					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
 			}
 
+			counter mn;
 			for (counter l = ddl; l > 0; --l)
 			{
 				mn = scale[l];
@@ -360,5 +355,88 @@ namespace _ANNA
 			return mse / (md * mo.size());
 		}
 
+		counter getNParams()
+		{
+			counter rv = 0;
+			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
+			rv -= inp_size;
+			rv -= out_size;
+			return rv;
+		}
+
+		std::vector<counter> getScale() { return scale; }
+
+		pa2 getBias() { return neuron_bias; }
+		pa3 getWeight() { return weight; }
+
+		void train(pa3& d, counter e)
+		{
+#ifdef DEBUG
+			if ((d.size() != 2) || (d[0].size() != d[1].size())) throw std::runtime_error("ANNA: Error at train: Dataset d formatted wrong.");
+#endif // DEBUG
+
+			counter chunkSize = counter(std::ceil(d[0].size() / threads));
+			counter chunkRemainder = d[0].size() % chunkSize;
+
+			std::vector<ANNA> model(threads, *this);
+			std::vector<std::thread> pool(threads);
+			pa3 model_data_b(threads);
+			std::vector<pa3> model_data_w(threads);
+
+			for (counter t = 0; t < threads; ++t)
+			{
+				pool[t] = std::thread
+				(
+					[&]
+					(counter id)
+					{
+						counter cs = chunkSize * id; // cs chunk start
+						counter ce = cs + chunkSize; // ce chunk end
+
+						for (counter i = 0; i < e; ++i)
+						{
+							for (counter s = cs; s < ce; ++s)
+							{
+								model[id].forward(d[0][s]);
+								model[id].backward(d[1][s]);
+							}
+						}
+					},
+					t
+				);
+			}
+			for (counter t = 0; t < threads; ++t)
+			{
+				if (pool[t].joinable()) pool[t].join();
+				model_data_b[t] = model[t].getBias();
+				model_data_w[t] = model[t].getWeight();
+			}
+
+			for (counter l = 0; l < d_layers; ++l)
+			{
+				counter mn = scale[l]; // mn max neuron
+				for (counter n = 0; n < mn; ++n)
+				{
+					counter mnn = scale[l + 1]; // mnn max next neuron
+					for (counter nn = 0; nn < mnn; ++nn)
+					{
+						prec x = prec(0.0f);
+						for (counter t = 0; t < threads; ++t) x += model_data_w[t][l][n][nn];
+						weight[l][n][nn] = x / threads;
+					}
+				}
+			}
+
+			for (counter l = 1; l < d_layers; ++l)
+			{
+				counter mn = scale[l];
+				for (counter n = 0; n < mn; ++n)
+				{
+					prec x = prec(0.0f);
+					for (counter t = 0; t < threads; ++t) x += model_data_b[t][l][n];
+					neuron_bias[l][n] = x / threads;
+				}
+			}
+		}
 	};
 };
