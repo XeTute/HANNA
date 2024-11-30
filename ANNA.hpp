@@ -387,8 +387,7 @@ namespace _ANNA
 			{
 				pool[t] = std::thread
 				(
-					[&]
-					(counter id)
+					[&] (counter id)
 					{
 						counter cs = chunkSize * id; // cs chunk start
 						counter ce = cs + chunkSize; // ce chunk end
@@ -412,20 +411,26 @@ namespace _ANNA
 				model_data_w[t] = model[t].getWeight();
 			}
 
-			for (counter l = 0; l < d_layers; ++l)
-			{
-				counter mn = scale[l]; // mn max neuron
-				for (counter n = 0; n < mn; ++n)
+			std::thread t0 = std::thread
+			(
+				[&] ()
 				{
-					counter mnn = scale[l + 1]; // mnn max next neuron
-					for (counter nn = 0; nn < mnn; ++nn)
+					for (counter l = 0; l < d_layers; ++l)
 					{
-						prec x = prec(0.0f);
-						for (counter t = 0; t < threads; ++t) x += model_data_w[t][l][n][nn];
-						weight[l][n][nn] = x / threads;
+						counter mn = scale[l]; // mn max neuron
+						for (counter n = 0; n < mn; ++n)
+						{
+							counter mnn = scale[l + 1]; // mnn max next neuron
+							for (counter nn = 0; nn < mnn; ++nn)
+							{
+								prec x = prec(0.0f);
+								for (counter t = 0; t < threads; ++t) x += model_data_w[t][l][n][nn];
+								weight[l][n][nn] = x / threads;
+							}
+						}
 					}
 				}
-			}
+			);
 
 			for (counter l = 1; l < d_layers; ++l)
 			{
@@ -437,6 +442,7 @@ namespace _ANNA
 					neuron_bias[l][n] = x / threads;
 				}
 			}
+			if (t0.joinable()) t0.join();
 		}
 	};
 };
