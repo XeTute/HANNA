@@ -17,8 +17,7 @@ constexpr auto PATH = "HDN.anna"; // HDD heart disease
 int main()
 {
 	ANNA<float> HDN; // HDN heart disease network
-	HDN.setThreads(6);
-	HDN.lr = float(0.001); // 0.001 ~ (1 / 1025) (1025 is the amount of samples in the training data)
+	HDN.lr = float(0.003); // 0.003 ~ (1 / 302) (302 is the amount of samples in the training data)
 
 	try
 	{
@@ -29,11 +28,12 @@ int main()
 	}
 	catch (...)
 	{
-		HDN.init({ 12, 64, 32, 16, 8, 1 });
+		HDN.init({ 12, 32, 16, 8, 1 });
 		std::cout
 			<< "Failed to load Heart Disease Network from file " << PATH
 			<< ".\nTraining from scratch, the new network contains " << HDN.getNParams() << " parameters.\n";
 	}
+	HDN.setThreads(6);
 
 	std::vector<std::vector<std::vector<float>>> d(2, std::vector<std::vector<float>>()); // d dataset, d[0], input d[1] output
 
@@ -64,16 +64,7 @@ int main()
 		std::cout << "Training...\n";
 		Timepoint tp[2] = { hdc::now() };
 
-		for (std::size_t e = 0; mse > 0.2; ++e)
-		{
-			for (std::size_t s = 0; s < ms; ++s)
-			{
-				HDN.forward(d[0][s]);
-				HDN.backward(d[1][s]);
-			}
-			mse = HDN.getMSE(d);
-			std::cout << "MSE: " << mse << " for Epoch " << e << '\n';
-		}
+		HDN.train(d, 4400);
 
 		tp[1] = hdc::now();
 		std::cout
