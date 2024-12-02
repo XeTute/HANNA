@@ -44,7 +44,7 @@ namespace _ANNA
 			std::size_t mb0 = b[0].size();
 			for (std::size_t i = 0; i < mb0; ++i)
 			{
-				if (b[0][i] == ',')
+				if ((b[0][i] == ',') || (b[0][i] == ';'))
 				{
 					push_value.push_back(std::stof(b[1]));
 					b[1].clear();
