@@ -40,14 +40,14 @@ int main()
 	{ // Format dataset
 		std::vector<std::vector<float>> csv = loadCSVf("cardio-hdd.csv"); // loadCSVf ( f = float ) in _ANNA::
 
-		std::size_t ms = csv.size(); // ms max samples
+		std::size_t ms = (16 * 1024); // ms max samples, usually csv.size()
 		std::size_t me = csv[0].size(); // me max elems per sample
-		std::size_t dme = csv[0].size() - 1;
+		std::size_t dme = me - 1;
 
 		d[0] = std::vector<std::vector<float>>(ms, std::vector<float>(dme, 0.0f));
 		d[1] = std::vector<std::vector<float>>(ms, std::vector<float>(1, 0.0f));
 
-		for (std::size_t s = 0; s < d[0].size(); ++s)
+		for (std::size_t s = 0; s < (16 * 1024); ++s)
 		{
 			for (std::size_t e = 1; e < dme; ++e) d[0][s][e] = csv[s][e]; // d[0][s][0] is id, not relevant
 			d[1][s][0] = csv[s][dme];
@@ -63,19 +63,19 @@ int main()
 	while (mse > 0.2)
 	{
 		Timepoint tp[2] = { hdc::now() };
-
+	
 		float mse = 1.0f;
 		HDN.train(d, 150);
 		mse = HDN.getMSE(d);
-
-		if (mse > 0.23) HDN.lr = 0.01;
-		else HDN.lr = 0.001;
-
+	
+		if (mse > 0.23) HDN.lr = float(0.01);
+		else HDN.lr = float(0.001);
+	
 		tp[1] = hdc::now();
 		std::cout
 			<< "150 Epochs took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "s.\n"
 			<< "MSE: " << mse << '\n';
-
+	
 		HDN.save(PATH);
 	}
 
@@ -83,10 +83,11 @@ int main()
 	for (std::size_t s = 0; s < d[0].size(); ++s)
 	{
 		HDN.forward(d[0][s]);
+
 		// std::cout
 		// 	<< "\nGiven the input of: \n"
 		// 	<< "- Age(Days): " << d[0][s][0]
-		// 	<< "\n- Gender: " << (d[0][s][1] ? "Male" : "Female")
+		// 	<< "\n- Gender: " << ((d[0][s][1] - 1) ? "Male" : "Female")
 		// 	<< "\n- Height(cm): " << d[0][s][2]
 		// 	<< "\n- Weight(kg): " << d[0][s][3]
 		// 	<< "\n- Systolic blood pressure(mmHg): " << d[0][s][4]
@@ -97,7 +98,8 @@ int main()
 		// 	<< "\n- Drinks Alcohol?: " << (d[0][s][9] ? "Yes" : "No")
 		// 	<< "\n- Physical Activity?: " << (d[0][s][10] ? "Yes" : "No")
 		// 	<< "\nThe model predicated: " << ((HDN.getOutput()[0] >= 0.44) ? "Heart Disease" : "No Heart Disease") << " : " << (((HDN.getOutput()[0] >= 0.44) == d[1][s][0]) ? "Correct\n" : "Incorrect\n");
-		if ((HDN.getOutput()[0] >= 0.5) != d[1][s][0]) ++error;
+
+		if (static_cast<int>(HDN.getOutput()[0] >= 0.5) != d[1][s][0]) ++error;
 	}
 	std::cout << "\nWrong Predictions: " << error << "\nCorrect Predictions: " << d[0].size() - error << '\n';
 
