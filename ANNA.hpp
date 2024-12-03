@@ -75,7 +75,7 @@ namespace _ANNA
 		std::vector<counter> scale;
 
 		counter layers;
-		counter d_layers; // decreased layers, layers - 1
+		counter dl; // decreased layers, layers - 1
 		counter ddl;
 
 		counter threads;
@@ -83,14 +83,14 @@ namespace _ANNA
 		counter inp_size;
 		counter out_size;
 
-		prec sigmoid(prec x)
+		prec actvtn(prec x)
 		{
 			x = std::min(std::max(x, -20.0f), 20.0f); // prevent NaN, inf or other weird numbers
 			return 1 / (1 + std::exp(-x));
 		}
-		prec sigDeri(prec x)
+		prec actvtnDr(prec x)
 		{
-			prec sig = sigmoid(x);
+			prec sig = actvtn(x);
 			return sig * (1 - sig);
 		}
 
@@ -106,8 +106,11 @@ namespace _ANNA
 
 			scale = std::vector<counter>(0);
 
+			inp_size = 0;
+			out_size = 0;
+
 			layers = 0;
-			d_layers = 0;
+			dl = 0;
 			ddl = 0;
 			lr = 0.0f;
 			threads = 1;
@@ -131,18 +134,18 @@ namespace _ANNA
 			setThreads(1);
 
 			layers = scale.size();
-			d_layers = layers - 1;
-			ddl = d_layers - 1;
+			dl = layers - 1;
+			ddl = dl - 1;
 
 			inp_size = _scale[0];
-			out_size = _scale[d_layers];
+			out_size = _scale[dl];
 
-			weight = pa3(d_layers);
+			weight = pa3(dl);
 			neuron_value = pa2(layers);
-			neuron_bias = pa2(d_layers);
+			neuron_bias = pa2(dl);
 			delta = pa2(layers);
 
-			for (counter layer = 0; layer < d_layers; ++layer) // < d_layers for weight
+			for (counter layer = 0; layer < dl; ++layer) // < dl for weight
 			{
 				counter neurons = scale[layer];
 				counter nnl = scale[layer + 1];
@@ -166,8 +169,8 @@ namespace _ANNA
 				}
 			}
 
-			neuron_value[d_layers] = pa(out_size);
-			delta[d_layers] = pa(out_size);
+			neuron_value[dl] = pa(out_size);
+			delta[dl] = pa(out_size);
 			neuron_bias[0] = pa(0);
 		}
 
@@ -183,7 +186,7 @@ namespace _ANNA
 				for (counter neuron = 0; neuron < inp_size; ++neuron)
 					w.write((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
 
-				for (counter layer = 1; layer < d_layers; ++layer)
+				for (counter layer = 1; layer < dl; ++layer)
 				{
 					for (counter neuron = 0; neuron < scale[layer]; ++neuron)
 						w.write((char*)weight[layer][neuron].data(), weight[layer][neuron].size() * sv);
@@ -228,7 +231,7 @@ namespace _ANNA
 					for (counter neuron = 0; neuron < inp_size; ++neuron)
 						r.read((char*)weight[0][neuron].data(), weight[0][neuron].size() * sv);
 
-					for (counter layer = 1; layer < d_layers; ++layer)
+					for (counter layer = 1; layer < dl; ++layer)
 					{
 						for (counter neuron = 0; neuron < scale[layer]; ++neuron)
 							r.read((char*)weight[layer][neuron].data(), weight[layer][neuron].size() * sv);
@@ -257,7 +260,7 @@ namespace _ANNA
 
 			for (counter j = 0; j < inp_size; ++j) neuron_value[0][j] = i[j];
 
-			for (counter l = 1; l < d_layers; ++l)
+			for (counter l = 1; l < dl; ++l)
 			{
 				counter dl = l - 1;
 				counter cn = scale[l];
@@ -269,29 +272,29 @@ namespace _ANNA
 
 					for (counter cln = 0; cln < mcln; ++cln) // cln current last neuron
 						neuron_value[l][n] += (neuron_value[dl][cln] * weight[dl][cln][n]);
-					neuron_value[l][n] = sigmoid(neuron_value[l][n]);
+					neuron_value[l][n] = actvtn(neuron_value[l][n]);
 				}
 			}
 
 			for (counter n = 0; n < out_size; ++n)
 			{
 				counter mnl = scale[ddl];
-				neuron_value[d_layers][n] = prec(0.0f);
+				neuron_value[dl][n] = prec(0.0f);
 
 				for (counter nl = 0; nl < mnl; ++nl)
-					neuron_value[d_layers][n] += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
-				neuron_value[d_layers][n] = sigmoid(neuron_value[d_layers][n]);
+					neuron_value[dl][n] += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
+				neuron_value[dl][n] = actvtn(neuron_value[dl][n]);
 			}
 		}
 
-		pa getOutput() { return neuron_value[d_layers]; }
+		pa getOutput() { return neuron_value[dl]; }
 
 		void backward(pa& eo) // eo expected output
 		{
 			for (counter n = 0; n < out_size; ++n)
 			{
-				prec ao = neuron_value[d_layers][n]; // caching the current neuron
-				delta[d_layers][n] = (eo[n] - ao) * sigDeri(ao);
+				prec ao = neuron_value[dl][n]; // caching the current neuron
+				delta[dl][n] = (eo[n] - ao) * actvtnDr(ao);
 			}
 
 			for (int64_t l = ddl; l >= 0; --l)
@@ -307,7 +310,7 @@ namespace _ANNA
 					for (counter nn = 0; nn < mnn; ++nn) // nn next neuron(in the next layer)
 						e += delta[il][nn] * weight[l][n][nn];
 
-					delta[l][n] = e * sigDeri(neuron_value[l][n]);
+					delta[l][n] = e * actvtnDr(neuron_value[l][n]);
 				}
 			}
 
@@ -315,7 +318,7 @@ namespace _ANNA
 			{
 				counter mddl = scale[ddl];
 				for (counter nl = 0; nl < mddl; ++nl) // nl neuron last layer
-					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[d_layers][n] * lr;
+					weight[ddl][nl][n] += neuron_value[ddl][nl] * delta[dl][n] * lr;
 			}
 
 			counter mn;
@@ -358,7 +361,7 @@ namespace _ANNA
 		counter getNParams()
 		{
 			counter rv = 0;
-			for (counter l = 0; l < d_layers; ++l) rv += scale[l] * scale[l + 1] + scale[l];
+			for (counter l = 0; l < dl; ++l) rv += scale[l] * scale[l + 1] + scale[l];
 			rv -= inp_size;
 			rv -= out_size;
 			return rv;
@@ -415,7 +418,7 @@ namespace _ANNA
 			(
 				[&] ()
 				{
-					for (counter l = 0; l < d_layers; ++l)
+					for (counter l = 0; l < dl; ++l)
 					{
 						counter mn = scale[l]; // mn max neuron
 						for (counter n = 0; n < mn; ++n)
@@ -432,7 +435,7 @@ namespace _ANNA
 				}
 			);
 
-			for (counter l = 1; l < d_layers; ++l)
+			for (counter l = 1; l < dl; ++l)
 			{
 				counter mn = scale[l];
 				for (counter n = 0; n < mn; ++n)
