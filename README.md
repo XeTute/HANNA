@@ -1,3 +1,5 @@
+> ANNA is still new, and it may have some small bugs or undefined behaviour which we may did not expirience while testing. Please test your application before publishing and issue bugs when they happen.
+
 # ANNA
 ANNA(Asadullah's Neural Network Architecture) is our new experimental architecture which we actively develop.
 It's supposed to be a more efficient alternative to the Transformers architecture for roleplaying, story-telling and similar tasks which don't require the amount of performance as the average Transformer model offers.
