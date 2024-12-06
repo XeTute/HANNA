@@ -1,32 +1,21 @@
 > ANNA is still new, and it may have some small bugs or undefined behaviour which we may did not expirience while testing. Please test your application before publishing and issue bugs when they happen.
 
 # ANNA
-ANNA(Asadullah's Neural Network Architecture) is our new experimental architecture which we actively develop.
-It's supposed to be a more efficient alternative to the Transformers architecture for roleplaying, story-telling and similar tasks which don't require the amount of performance as the average Transformer model offers.
-Currently, it's simply an implementation of a MLP(Multi-Layer-Perceptron) with thread support for large datasets with minimal to no overhead using the ANNA::train function. As far as we know, SIMD is automatically applied to std::vector for compilers like GCC and MSVC.
+ANNA is short for Asadullah's Neural Network Architecture. This is an implementation of ANNA, therefore we named this repo and the library "ANNA" too.<br>
+The naming can be confusing, but once you get it, you'll navigate around easily.
 
-# Getting started
-Ensure you have `git` and `g++` installed on the device you want to run following commands on.
-First,
-```
-git clone https://github.com/XeTute/ANNA
-cd ANNA
-```
-then, on Linux (NOT Termux, it's version of g++ isn't really doing what it's supposed to), you can run `car.sh`(compile and run), or
-```
-g++ -D__USE_MINGW_ANSI_STDIO=0 -O3 -Ofast -march=native -mtune=native -flto -fomit-frame-pointer -funroll-loops -ffast-math -fwhole-program -fno-exceptions -fno-rtti -fexceptions -pthread main.cpp ANNA.hpp -o anna
-chmod +x anna
-./anna
-```
-or, if you're on Windows, you can run `car.bat`, or
-```
-g++ -D__USE_MINGW_ANSI_STDIO=0 -O3 -Ofast -march=native -mtune=native -flto -fomit-frame-pointer -funroll-loops -ffast-math -fwhole-program -fno-exceptions -fno-rtti -fexceptions -mthread main.cpp ANNA.hpp -o anna.exe
-anna.exe
-```
-This will download, compile and execute the latest main.cpp found on this GitHub repo.
+# What this repo is
+This repo is a headers-only library which does not require any dependencies for CPU, and OpenCL for GPU usage.<br>
+We originally wanted to implement only CPU and CUDA, but Intel's latest GPUs are pretty good for consumer-AI-tasks, and OpenCL runs on not only GPUs, so it's simply way smarter.<br>
 
-# Other Notices
-Currently, only CPUs(with thread support on ANNA::train for large datasets) are supported, but we're planning to add support for CUDA 12.6.
+# Language
+ANNA is a native C++, headers-only library. We're not currently planning to port it to languages like Python or Java.
+
+# Learn how to use ANNA
+You can read the Wiki on this repo, but it's not updated pretty often. It's a great doc though.<br>
+But, listen, we're doing our best—We're currently scripting some tutorial and Wiki pages on our webpage(s) xetute.github.io, which is more reliable than our Apex domain xetute.com.
+
+# Happy coding!
 
 # Star History
 <a href="https://star-history.com/#XeTute/ANNA&Date">
