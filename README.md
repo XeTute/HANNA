@@ -26,7 +26,7 @@ anna.exe
 This will download, compile and execute the latest main.cpp found on this GitHub repo.
 
 # Other Notices
-Currently, only CPUs(with thread support on ANNA::train for large datasets) are supported, but we're planning to add support for CUDA through another repo("ANNA-CUDA").
+Currently, only CPUs(with thread support on ANNA::train for large datasets) are supported, but we're planning to add support for CUDA 12.6.
 
 # Star History
 <a href="https://star-history.com/#XeTute/ANNA&Date">
