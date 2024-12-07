@@ -12,11 +12,12 @@
 #include <thread>
 #include <vector>
 
+#include "typedefs.hpp"
+
 // ANNA = Asadullah's Neural Network Architecture
 
 namespace _ANNA
 {
-	typedef uint64_t counter;
 	std::random_device rd;
 	std::mt19937 gen(rd()); // gen(rd) will return a "random" number.
 
@@ -25,7 +26,7 @@ namespace _ANNA
 		std::ifstream r(path);
 		if (!r.is_open())
 		{
-			throw std::runtime_error(std::string("Failed to load CSV from " + path + '.').c_str());
+			throw std::runtime_error(std::string("[ANNA CPU-Version]: Failed to load CSV from " + path + '.').c_str());
 			return std::vector<std::vector<float>>();
 		}
 
@@ -63,7 +64,8 @@ namespace _ANNA
 	class ANNA
 	{
 	private:
-		typedef std::vector<prec> pa; // pa = prec array
+
+		typedef std::vector<prec> pa; // pa = prec array, not defined in "typedefs.hpp" because it requires typename prec
 		typedef std::vector<pa> pa2; // pa2 = prec array 2 dim
 		typedef std::vector<pa2> pa3; // pa3 = prec array 3 dim
 
@@ -95,6 +97,11 @@ namespace _ANNA
 		}
 
 	public:
+
+		typedef std::vector<prec> pa;
+		typedef std::vector<pa> pa2;
+		typedef std::vector<pa2> pa3;
+
 		prec lr = 0.0f;
 
 		ANNA()
@@ -115,7 +122,7 @@ namespace _ANNA
 			lr = 0.0f;
 			threads = 1;
 
-			std::cout << "ANNA: Prepared for init.\n";
+			std::cout << "[ANNA CPU-Version]: Prepared for init.\n";
 		}
 
 		ANNA(std::vector<counter> _scale) { init(_scale); }
@@ -127,7 +134,7 @@ namespace _ANNA
 		{
 			if (_scale.size() < 3)
 			{
-				throw std::runtime_error("ANNA requires at least a total of three layers.");
+				throw std::runtime_error("[ANNA CPU-Version]: ANNA requires at least a total of three layers.");
 				return;
 			}
 			scale = _scale;
@@ -253,7 +260,7 @@ namespace _ANNA
 #ifdef DEBUG
 			if (neuron_value[0].size() != i.size())
 			{
-				throw std::runtime_error(std::string("ANNA: The input Tensor's size is not equal to the input layer Tensor's size.").c_str());
+				throw std::runtime_error(std::string("[ANNA CPU-Version]: Error at void forward(pa& i): The input Tensor's size is not equal to the input layer Tensor's size.").c_str());
 				return;
 			}
 #endif // DEBUG
@@ -375,7 +382,7 @@ namespace _ANNA
 		void train(pa3& d, counter e)
 		{
 #ifdef DEBUG
-			if ((d.size() != 2) || (d[0].size() != d[1].size())) throw std::runtime_error("ANNA: Error at train: Dataset d formatted wrong.");
+			if ((d.size() != 2) || (d[0].size() != d[1].size())) throw std::runtime_error("[ANNA CPU-Version]: Error at void train(pa3&d, counter e): Dataset d formatted wrong.");
 #endif // DEBUG
 
 			counter chunkSize = counter(std::ceil(d[0].size() / threads));
