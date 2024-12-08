@@ -2,16 +2,6 @@
 #define ANNA_HPP
 #endif
 
-#include <cmath> // sqrt
-#include <cstdint> // int64_t, uin64_t
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <stdexcept>
-#include <string>
-#include <thread>
-#include <vector>
-
 #include "typedefs.hpp"
 
 // ANNA = Asadullah's Neural Network Architecture
@@ -102,7 +92,7 @@ namespace _ANNA
 		typedef std::vector<pa> pa2;
 		typedef std::vector<pa2> pa3;
 
-		prec lr = 0.0f;
+		prec lr = 0.f;
 
 		ANNA()
 		{
