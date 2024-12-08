@@ -1,107 +1,68 @@
-#include <iostream>
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+#define CL_HPP_TARGET_OPENCL_VERSION 300
+#endif
+
 #include <chrono>
-#include <cmath>
-#include <string>
 
-#include "ANNA.hpp"
+#include "ANNA-CPU.hpp"
 
-using namespace std::literals::chrono_literals;
-using namespace std::chrono;
+#ifdef ANNA_OpenCL_HPP
+using namespace _ANNA_OCL;
+#endif
+
+#ifdef ANNA_CPU_HPP
 using namespace _ANNA;
+#endif
 
-typedef time_point<high_resolution_clock> Timepoint;
-typedef high_resolution_clock hdc; // high res clock
+using namespace std::chrono_literals;
 
-constexpr auto PATH = "HDN.ANNA";
+constexpr auto PATH = "cardio-hdd.ANNA";
 
 int main()
 {
-	ANNA<float> HDN; // HDN heart disease network
-	HDN.lr = float(0.001);
+	ANNA<float> model({ 11, 64, 32, 32, 8, 1});
 
-	try
+	std::vector<std::vector<float>> CSV = loadCSVf("cardio-hdd.csv");
+	std::vector<std::vector<std::vector<float>>> train_data(2);
+
+	counter dataset_size = CSV.size();
+	counter sample_size = CSV[0].size();
+	counter dss = sample_size - 1; // dss is short for decreased sample size
+
+	train_data[0] = std::vector<std::vector<float>>(dataset_size, std::vector<float>(sample_size - 2, 0.f)); // train_data[0] is input
+	train_data[1] = std::vector<std::vector<float>>(dataset_size, std::vector<float>(2, 0.f)); // train_data[1] is output
+
+	// Format dataset
+	for (counter i = 0; i < dataset_size; ++i)
 	{
-		HDN.load(PATH);
-		std::cout
-			<< "Loaded Heart Disease Network from file " << PATH
-			<< ".\nIt contains " << HDN.getNParams() << " parameters.\n";
-	}
-	catch (...)
-	{
-		HDN.init({ 11, 64, 32, 16, 8, 8, 1 });
-		std::cout
-			<< "Failed to load Heart Disease Network from file " << PATH
-			<< ".\nTraining from scratch, the new network contains " << HDN.getNParams() << " parameters.\n";
-	}
-	HDN.setThreads(6);
-
-	std::vector<std::vector<std::vector<float>>> d(2, std::vector<std::vector<float>>()); // d dataset, d[0], input d[1] output
-
-	{ // Format dataset
-		std::vector<std::vector<float>> csv = loadCSVf("cardio-hdd.csv"); // loadCSVf ( f = float ) in _ANNA::
-
-		std::size_t ms = (16 * 1024); // ms max samples, usually csv.size()
-		std::size_t me = csv[0].size(); // me max elems per sample
-		std::size_t dme = me - 1;
-
-		d[0] = std::vector<std::vector<float>>(ms, std::vector<float>(dme, 0.0f));
-		d[1] = std::vector<std::vector<float>>(ms, std::vector<float>(1, 0.0f));
-
-		for (std::size_t s = 0; s < (16 * 1024); ++s)
-		{
-			for (std::size_t e = 1; e < dme; ++e) d[0][s][e] = csv[s][e]; // d[0][s][0] is id, not relevant
-			d[1][s][0] = csv[s][dme];
-		}
-
-		csv.clear();
+		for (counter j = 1; j < dss; ++j) train_data[0][i][j - 1] = CSV[i][j];
+		train_data[1][i][0] = CSV[i][dss];
 	}
 
-	std::size_t ms = d[0].size();
+	try { model.load(PATH); }
+	catch (...) { std::cout << "No Model found saved on " << PATH << ".\n"; }
+	model.setThreads(6);
 
-	float mse = HDN.getMSE(d);
-	std::cout << "Current MSE: " << mse << '\n';
-	while (mse > 0.2)
-	{
-		Timepoint tp[2] = { hdc::now() };
+	float mse = model.getMSE(train_data); // This will work because train_data[0 = input, 1 = expected output][sample]
 	
-		float mse = 1.0f;
-		HDN.train(d, 150);
-		mse = HDN.getMSE(d);
+	std::chrono::time_point<std::chrono::high_resolution_clock> time[2] = { std::chrono::high_resolution_clock::now() };
 	
-		if (mse > 0.23) HDN.lr = float(0.01);
-		else HDN.lr = float(0.001);
-	
-		tp[1] = hdc::now();
-		std::cout
-			<< "150 Epochs took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "s.\n"
-			<< "MSE: " << mse << '\n';
-	
-		HDN.save(PATH);
-	}
+	if (mse >= 0.2) model.train(train_data, 500); // Threaded, took 76s with .setThreads(6) on AMD Ryzen 5 5600G on Windows 10
 
-	counter error = 0;
-	for (std::size_t s = 0; s < d[0].size(); ++s)
-	{
-		HDN.forward(d[0][s]);
+	// for (counter e = 0; e < 500; ++e) // Single Threaded, took 316s with CPU above with OS above
+	// {
+	// 	   for (counter s = 0; s < train_data[0].size(); ++s)
+	// 	   {
+	// 		   model.forward(train_data[0][s]);
+	// 		   model.backward(train_data[1][s]);
+	// 	   }
+	// }
 
-		// std::cout
-		// 	<< "\nGiven the input of: \n"
-		// 	<< "- Age(Days): " << d[0][s][0]
-		// 	<< "\n- Gender: " << ((d[0][s][1] - 1) ? "Male" : "Female")
-		// 	<< "\n- Height(cm): " << d[0][s][2]
-		// 	<< "\n- Weight(kg): " << d[0][s][3]
-		// 	<< "\n- Systolic blood pressure(mmHg): " << d[0][s][4]
-		// 	<< "\n- Diastolic blood pressure(mmHg): " << d[0][s][5]
-		// 	<< "\n- Cholesterol: " << ((d[0][s][6] == 1) ? "Normal" : ((d[0][s][6] == 2) ? "Above Normal" : "Well Above Normal"))
-		// 	<< "\n- Glucose: " << ((d[0][s][7] == 1) ? "Normal" : ((d[0][s][7] == 2) ? "Above Normal" : "Well Above Normal"))
-		// 	<< "\n- Smokes?: " << (d[0][s][8] ? "Yes" : "No")
-		// 	<< "\n- Drinks Alcohol?: " << (d[0][s][9] ? "Yes" : "No")
-		// 	<< "\n- Physical Activity?: " << (d[0][s][10] ? "Yes" : "No")
-		// 	<< "\nThe model predicated: " << ((HDN.getOutput()[0] >= 0.44) ? "Heart Disease" : "No Heart Disease") << " : " << (((HDN.getOutput()[0] >= 0.44) == d[1][s][0]) ? "Correct\n" : "Incorrect\n");
+	time[1] = std::chrono::high_resolution_clock::now();
 
-		if (static_cast<int>(HDN.getOutput()[0] >= 0.5) != d[1][s][0]) ++error;
-	}
-	std::cout << "\nWrong Predictions: " << error << "\nCorrect Predictions: " << d[0].size() - error << '\n';
+	std::cout << "Took " << std::chrono::duration_cast<std::chrono::seconds>(time[1] - time[0]).count() << "s.\n";
+
+	model.save(PATH);
 
 	return 0;
 }
