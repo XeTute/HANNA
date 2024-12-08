@@ -88,10 +88,6 @@ namespace _ANNA
 
 	public:
 
-		typedef std::vector<prec> pa;
-		typedef std::vector<pa> pa2;
-		typedef std::vector<pa2> pa3;
-
 		prec lr = 0.f;
 
 		ANNA()
