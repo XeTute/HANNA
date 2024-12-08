@@ -1,7 +1,6 @@
 #ifndef TYPEDEFS_HPP
 #define TYPEDEFS_HPP
 #endif
-#include <CL/opencl.hpp>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
