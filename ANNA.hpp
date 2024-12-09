@@ -186,7 +186,7 @@ namespace _ANNA
 					w.write((char*)neuron_bias[layer].data(), neuron_bias[layer].size() * sv);
 				}
 			}
-			else throw std::runtime_error(std::string("Couldn't open " + path + " to save ANNA.").c_str());
+			else throw std::runtime_error(std::string("[ANNA CPU-Version]: Couldn't open " + path + " to save ANNA.").c_str());
 		}
 
 		void load(std::string path)
@@ -234,11 +234,11 @@ namespace _ANNA
 				catch (...)
 				{
 					r.close();
-					throw std::runtime_error(std::string("Coudn't open " + path + " to load ANNA.").c_str());
+					throw std::runtime_error(std::string("[ANNA CPU-Version]: Coudn't open " + path + " to load ANNA.").c_str());
 					return;
 				}
 			}
-			else throw std::runtime_error(std::string("Coudn't open " + path + " to load ANNA.").c_str());
+			else throw std::runtime_error(std::string("[ANNA CPU-Version]: Coudn't open " + path + " to load ANNA.").c_str());
 		}
 
 		void forward(pa& i) // I assume that input has the same amount of input neurons as the MLP
@@ -278,6 +278,11 @@ namespace _ANNA
 					x += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
 				neuron_value[dl][n] = actvtn(x);
 			}
+		}
+
+		void inference(pa2& i)
+		{
+
 		}
 
 		pa getOutput() { return neuron_value[dl]; }
