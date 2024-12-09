@@ -1,5 +1,5 @@
-#ifndef ANNA_HPP
-#define ANNA_HPP
+#ifndef ANNA_CPU_HPP
+#define ANNA_CPU_HPP
 #endif
 
 #include "typedefs.hpp"
@@ -261,22 +261,22 @@ namespace _ANNA
 				for (counter n = 0; n < cn; ++n)
 				{
 					counter mcln = scale[dl];
-					neuron_value[l][n] = neuron_bias[l][n];
+					prec x = neuron_bias[l][n];
 
 					for (counter cln = 0; cln < mcln; ++cln) // cln current last neuron
-						neuron_value[l][n] += (neuron_value[dl][cln] * weight[dl][cln][n]);
-					neuron_value[l][n] = actvtn(neuron_value[l][n]);
+						x += (neuron_value[dl][cln] * weight[dl][cln][n]);
+					neuron_value[l][n] = actvtn(x);
 				}
 			}
 
 			for (counter n = 0; n < out_size; ++n)
 			{
 				counter mnl = scale[ddl];
-				neuron_value[dl][n] = prec(0.0f);
+				prec x = prec(0.0f);
 
 				for (counter nl = 0; nl < mnl; ++nl)
-					neuron_value[dl][n] += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
-				neuron_value[dl][n] = actvtn(neuron_value[dl][n]);
+					x += (neuron_value[ddl][nl] * weight[ddl][nl][n]);
+				neuron_value[dl][n] = actvtn(x);
 			}
 		}
 
