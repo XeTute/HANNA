@@ -6,7 +6,7 @@ The naming might be a bit confusing at first, but once you get used to it, navig
 
 # To-Do
 - Implement batched inference and use it for _ANNA::ANNA::train
-- In _ANNA::ANNA::train, also train on the modulo samples (`counter chunkRemainder = d[0].size() % chunkSize;`)
+- ~In _ANNA::ANNA::train, also train on the modulo samples (`counter chunkRemainder = d[0].size() % chunkSize;`)~
 - Upload OpenCL beta, which may include bugs and create a note at init for it (`[ANNA OpenCL-Version]: The OCL Version of ANNA is still in the testing phase. Please test before production deployment.`)
 
 # What This Repository Is  
