@@ -17,8 +17,8 @@ Initially, we planned to implement support only for CPUs and CUDA, but Intel's l
 ANNA is a native **C++ header-only library**. We currently have no plans to port it to other languages, such as Python or Java.
 
 # Learn How to Use ANNA  
-You can read the **Wiki** in this repository. While it isn't updated very frequently, it still serves as a great resource.  
-However, we're actively working on creating tutorials and updated Wiki pages on our web pages at **xetute.github.io**, which is more reliable than our main domain **xetute.com**.  
+You can read the **Wiki** in this repository. While it isn't updated very frequently, it still serves as a great resource, and as soon as we upload or remove a function, we'll add it there quickly enough.<br>
+Apart from just reading Wikis, you can also check out our [YouTube Channel](https://www.youtube.com/@XeTuteTechnologies) for Tutorials.
 
 # Happy Coding!  
 
