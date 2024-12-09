@@ -373,7 +373,7 @@ namespace _ANNA
 		void train(pa3& d, counter e)
 		{
 #ifdef DEBUG
-			if ((d.size() != 2) || (d[0].size() != d[1].size())) throw std::runtime_error("[ANNA CPU-Version]: Error at void train(pa3&d, counter e): Dataset d formatted wrong.");
+			if ((d.size() != 2) || (d[0].size() != d[1].size())) throw std::runtime_error("[ANNA CPU-Version]: Error at void train(pa3& d, counter e): Dataset d formatted wrong.");
 #endif // DEBUG
 
 			counter chunkSize = counter(std::ceil(d[0].size() / threads));
@@ -381,8 +381,11 @@ namespace _ANNA
 
 			std::vector<ANNA> model(threads, *this);
 			std::vector<std::thread> pool(threads);
+
 			pa3 model_data_b(threads);
 			std::vector<pa3> model_data_w(threads);
+
+			std::cout << "[ANNA CPU-Version]: Note: Starting training...\n[ANNA CPU-Version]: Note: One Thread will receive " << chunkRemainder << " samples more than the other threads.\n";
 
 			for (counter t = 0; t < threads; ++t)
 			{
@@ -391,7 +394,10 @@ namespace _ANNA
 					[&] (counter id)
 					{
 						counter cs = chunkSize * id; // cs chunk start
-						counter ce = cs + chunkSize; // ce chunk end
+						counter ce; // ce chunk end
+
+						if (id == (threads - 1)) ce = cs + chunkSize + chunkRemainder;
+						else ce = cs + chunkSize;
 
 						for (counter i = 0; i < e; ++i)
 						{
@@ -405,14 +411,16 @@ namespace _ANNA
 					t
 				);
 			}
+
 			for (counter t = 0; t < threads; ++t)
 			{
 				if (pool[t].joinable()) pool[t].join();
 				model_data_b[t] = model[t].getBias();
 				model_data_w[t] = model[t].getWeight();
 			}
+			model.clear();
 
-			std::thread t0 = std::thread
+			std::thread t0
 			(
 				[&] ()
 				{
