@@ -21,6 +21,7 @@ constexpr auto PATH = "cardio-hdd.ANNA";
 int main()
 {
 	ANNA<float> model({ 11, 64, 32, 32, 8, 1});
+	model.lr = float(0.001);
 
 	std::vector<std::vector<float>> CSV = loadCSVf("cardio-hdd.csv");
 	std::vector<std::vector<std::vector<float>>> train_data(2);
@@ -30,7 +31,7 @@ int main()
 	counter dss = sample_size - 1; // dss is short for decreased sample size
 
 	train_data[0] = std::vector<std::vector<float>>(dataset_size, std::vector<float>(sample_size - 2, 0.f)); // train_data[0] is input
-	train_data[1] = std::vector<std::vector<float>>(dataset_size, std::vector<float>(2, 0.f)); // train_data[1] is output
+	train_data[1] = std::vector<std::vector<float>>(dataset_size, std::vector<float>(1, 0.f)); // train_data[1] is output
 
 	// Format dataset
 	for (counter i = 0; i < dataset_size; ++i)
@@ -41,6 +42,8 @@ int main()
 
 	try { model.load(PATH); }
 	catch (...) { std::cout << "No Model found saved on " << PATH << ".\n"; }
+	std::cout << "Model has a total of " << model.getNParams() << " parameters.\n";
+
 	model.setThreads(6);
 
 	float mse = model.getMSE(train_data); // This will work because train_data[0 = input, 1 = expected output][sample]
@@ -61,6 +64,9 @@ int main()
 	time[1] = std::chrono::high_resolution_clock::now();
 
 	std::cout << "Took " << std::chrono::duration_cast<std::chrono::seconds>(time[1] - time[0]).count() << "s.\n";
+
+	mse = model.getMSE(train_data);
+	std::cout << "MSE after training: " << mse << '\n';
 
 	model.save(PATH);
 
