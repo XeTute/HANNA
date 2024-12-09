@@ -5,7 +5,7 @@ ANNA stands for **Asadullah's Neural Network Architecture**. This repository con
 The naming might be a bit confusing at first, but once you get used to it, navigating will be straightforward.
 
 # To-Do
-- 🔴 Implement batched inference and use it for _ANNA::ANNA::train
+- 🔴 Add a function _ANNA::ANNA::inference which forward-props a batch of input matracies
 - 🟢 ~In _ANNA::ANNA::train, also train on the modulo samples (`counter chunkRemainder = d[0].size() % chunkSize;`)~
 - 🔴 Upload OpenCL beta, which may include bugs and create a note at init for it (`[ANNA OpenCL-Version]: The OCL Version of ANNA is still in the testing phase. Please test before production deployment.`)
 
