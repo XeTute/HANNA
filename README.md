@@ -1,5 +1,7 @@
 > ANNA is still new and may contain minor bugs or undefined behavior that we may not have experienced during testing. Please thoroughly test your application before publishing and report any issues that arise.
 
+![Logo generated using ChatGPT / DALLE2.](https://files.oaiusercontent.com/file-1AaKeNgXWdvpCXzLAwtL4w?se=2024-12-14T16%3A53%3A00Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3Db278a3ad-04d8-477d-b7e2-b98ed1cc9f01.webp&sig=zjTnScQricLfcWyDcEXW9mZ8vJOReoyuWQ2KMbm7yiI%3D)
+
 # ANNA  
 ANNA stands for **Asadullah's Neural Network Architecture**. This repository contains the implementation of ANNA, which is why we named both the repository and the library "ANNA."  
 The naming might be a bit confusing at first, but once you get used to it, navigating will be straightforward.
