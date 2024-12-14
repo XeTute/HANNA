@@ -50,16 +50,16 @@ int main()
 	
 	std::chrono::time_point<std::chrono::high_resolution_clock> time[2] = { std::chrono::high_resolution_clock::now() };
 	
-	// if (mse >= 0.2) model.train(train_data, 250); // Threaded, took 35s with .setThreads(6) on AMD Ryzen 5 5600G on Windows 10
+	if (mse >= 0.2) model.train(train_data, 250); // Threaded, took 35s with .setThreads(6) on AMD Ryzen 5 5600G on Windows 10
 
-	for (counter e = 0; e < 250; ++e) // Single Threaded, took 155s with CPU above with OS above
-	{
-		   for (counter s = 0; s < train_data[0].size(); ++s)
-		   {
-			   model.forward(train_data[0][s]);
-			   model.backward(train_data[1][s]);
-		   }
-	}
+	// for (counter e = 0; e < 250; ++e) // Single Threaded, took 155s with CPU above with OS above
+	// {
+	// 	  for (counter s = 0; s < train_data[0].size(); ++s)
+	// 	  {
+	// 	     model.forward(train_data[0][s]);
+	// 	     model.backward(train_data[1][s]);
+	// 	  }
+	// }
 
 	time[1] = std::chrono::high_resolution_clock::now();
 
