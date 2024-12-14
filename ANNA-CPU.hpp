@@ -327,11 +327,11 @@ namespace _ANNA
 				{
 					neuron_bias[l][n] += delta[l][n] * lr;
 
-					counter dl = l - 1;
-					counter mnl = scale[dl];
+					counter _dl = l - 1;
+					counter mnl = scale[_dl];
 
 					for (counter nl = 0; nl < mnl; ++nl) //nl neuron last layer
-						weight[dl][nl][n] += neuron_value[dl][nl] * delta[l][n] * lr;
+						weight[_dl][nl][n] += neuron_value[_dl][nl] * delta[l][n] * lr;
 				}
 			}
 		}
