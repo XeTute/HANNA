@@ -255,16 +255,16 @@ namespace _ANNA
 
 			for (counter l = 1; l < dl; ++l)
 			{
-				counter dl = l - 1;
+				counter _dl = l - 1;
 				counter cn = scale[l];
 
 				for (counter n = 0; n < cn; ++n)
 				{
-					counter mcln = scale[dl];
+					counter mcln = scale[_dl];
 					prec x = neuron_bias[l][n];
 
 					for (counter cln = 0; cln < mcln; ++cln) // cln current last neuron
-						x += (neuron_value[dl][cln] * weight[dl][cln][n]);
+						x += (neuron_value[_dl][cln] * weight[_dl][cln][n]);
 					neuron_value[l][n] = actvtn(x);
 				}
 			}
