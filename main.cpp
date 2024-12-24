@@ -1,10 +1,11 @@
 #include <iostream>
+#include "ANNA/Data-Prep/CSV.hpp"
 
-#include "ANNA-CPU/ANNA-CPU.hpp"
+using namespace CSV;
 
 int main()
 {
-    ANNA_CPU::ANNA model;
+    
 
     return 0;
 }
