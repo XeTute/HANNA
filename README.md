@@ -5,6 +5,7 @@ We're re-designing ANNA to structure the files more logical and the code more ef
 ToDo(see todo.md):
 ---
 ANNA-CPU:
+ANNA-CPU:
 - Init
 - Forward
 - Backward
@@ -21,4 +22,9 @@ Data-Prep:
 - CSV.hpp:
 - - ~loadCSVn~
 - - ~loadCSVstr~
+- - ~saveCSV~
+
+- normalize.hpp:
+- - ~minMaxNorm with overloads~
+- - ~ZScaleNorm with overloads~
 ---
