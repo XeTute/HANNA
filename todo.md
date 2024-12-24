@@ -15,3 +15,8 @@ Data-Prep:
 - CSV.hpp:
 - - ~loadCSVn~
 - - ~loadCSVstr~
+- - ~saveCSV~
+
+- normalize.hpp:
+- - ~minMaxNorm with overloads~
+- - ~ZScaleNorm with overloads~
