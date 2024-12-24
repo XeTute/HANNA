@@ -28,8 +28,8 @@ namespace ANNA_CPU
         dLayers = 0;
 
         scale = std::vector<n>(0);
-        neuron = std::vector<NEURON>(0);
-        weight = a3d(0);
+        // neuron init
+        // weight init
 
         color rgb;
         rgb.g = 255;

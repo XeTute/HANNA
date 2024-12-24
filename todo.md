@@ -14,4 +14,8 @@ ${ANNA-CPU}-OpenCL version
 Data-Prep:
 - ~loadCSVn~
 - ~loadCSVstr~
-- normalize
+- saveCSVn
+- saveCSVstr
+
+- ~minMaxNorm with overloads~
+- ~ZScaleNorm with overloads~

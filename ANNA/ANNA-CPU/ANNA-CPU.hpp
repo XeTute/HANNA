@@ -37,8 +37,8 @@ namespace ANNA_CPU
         n dLayers; // decreased layers
 
         std::vector<n> scale;
-        std::vector<NEURON> neuron;
-        a3d weight;
+        // neuron
+        // weight
 
     public:
 
