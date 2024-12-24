@@ -16,6 +16,8 @@ namespace CSV
     typedef uint64_t n;
 
     struct color { uint8_t r = 0; uint8_t g = 0; uint8_t b = 150; };
+    color red = { 205, 0, 150 };
+    color green = { 0, 255, 150 };
 
     std::ostringstream log_buff("");
     std::mutex log_buff_mutex;
@@ -39,7 +41,7 @@ namespace CSV
         std::ifstream r(path);
         if (!r.is_open())
         {
-            log("[CSV::loadCSVn]: Failed to open " + path + ". Will return an empty vector.", { 205, 0, 150 }, true);
+            log("[CSV::loadCSVn]: Failed to open " + path + ". Will return an empty vector.", red, true);
             return std::vector<std::vector<T>>(0);
         }
 
@@ -51,13 +53,13 @@ namespace CSV
 
             if (elems == 0)
             {
-                log("[CSV::loadCSVn]: File " + path + " contains invalid headers. Will return an empty vector.", { 205, 0, 150 }, true);
+                log("[CSV::loadCSVn]: File " + path + " contains invalid headers. Will return an empty vector.", red, true);
                 return std::vector<std::vector<T>>(0);
             }
             else
             {
                 ++elems;
-                log("[CSV::loadCSVn]: Headers red from " + path + ":\n" + headers, { 0, 255, 150 }, false);
+                log("[CSV::loadCSVn]: Headers red from " + path + ":\n" + headers, green, false);
             }
         }
 
@@ -78,7 +80,7 @@ namespace CSV
                 column.push_back(row);
             }
         }
-        catch (const std::exception& e) { log("[CSV::loadCSVn]: Failed to parse CSV:\n" + std::string(e.what()), { 205, 0, 150 }, true); }
+        catch (const std::exception& e) { log("[CSV::loadCSVn]: Failed to parse CSV:\n" + std::string(e.what()), red, true); }
 
         log("[CSV::loadCSVn]: Finished reading CSV file.", { 0, 255, 150 }, true);
 
@@ -90,7 +92,7 @@ namespace CSV
         std::ifstream r(path);
         if (!r.is_open())
         {
-            log("[CSV::loadCSVstr]: Failed to open " + path + ". Will return an empty vector.", { 205, 0, 150 }, true);
+            log("[CSV::loadCSVstr]: Failed to open " + path + ". Will return an empty vector.", red, true);
             return std::vector<std::vector<std::string>>();
         }
 
@@ -102,13 +104,13 @@ namespace CSV
 
             if (elems == 0)
             {
-                log("[CSV::loadCSVstr]: File " + path + " contains invalid headers. Will return an empty vector.", { 205, 0, 150 }, true);
+                log("[CSV::loadCSVstr]: File " + path + " contains invalid headers. Will return an empty vector.", red, true);
                 return std::vector<std::vector<std::string>>(0);
             }
             else
             {
                 ++elems;
-                log("[CSV::loadCSVstr]: Headers read from " + path + ":\n" + headers, { 0, 255, 150 }, false);
+                log("[CSV::loadCSVstr]: Headers read from " + path + ":\n" + headers, green, false);
             }
         }
 
@@ -155,13 +157,30 @@ namespace CSV
         }
         catch (const std::exception& e)
         {
-            log("[CSV::loadCSVstr]: Failed to parse CSV:\n" + std::string(e.what()), { 205, 0, 150 }, true);
+            log("[CSV::loadCSVstr]: Failed to parse CSV:\n" + std::string(e.what()), red, true);
         }
 
-        log("[CSV::loadCSVstr]: Finished reading CSV file.", { 0, 255, 150 }, true);
+        log("[CSV::loadCSVstr]: Finished reading CSV file.", green, true);
 
         return column;
     }
 
+    template <typename T>
+    bool saveCSV(std::vector<std::vector<T>> csv, std::string header, std::string path)
+    {
+        std::ofstream w(path);
+        if (!w.is_open()) return false;
+        w << header;
+        if (!bool(csv.size())) return true;
+
+        n elems = csv[0].size();
+        for (std::vector<T> row : csv)
+        {
+            w << '\n' << row[0];
+            for (n elem = 1; elem < elems; ++elem) w << ',' << row[elem];
+        }
+
+        return true;
+    }
 };
 #endif

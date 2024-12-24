@@ -12,10 +12,6 @@ ANNA-OCL:
 ${ANNA-CPU}-OpenCL version
 
 Data-Prep:
-- ~loadCSVn~
-- ~loadCSVstr~
-- saveCSVn
-- saveCSVstr
-
-- ~minMaxNorm with overloads~
-- ~ZScaleNorm with overloads~
+- CSV.hpp:
+- - ~loadCSVn~
+- - ~loadCSVstr~
