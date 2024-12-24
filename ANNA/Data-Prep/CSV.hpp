@@ -166,7 +166,7 @@ namespace CSV
     }
 
     template <typename T>
-    bool saveCSV(std::vector<std::vector<T>> csv, std::string header, std::string path)
+    bool saveCSVn(std::vector<std::vector<T>> csv, std::string header, std::string path)
     {
         std::ofstream w(path);
         if (!w.is_open()) return false;
@@ -178,6 +178,23 @@ namespace CSV
         {
             w << '\n' << row[0];
             for (n elem = 1; elem < elems; ++elem) w << ',' << row[elem];
+        }
+
+        return true;
+    }
+
+    bool saveCSVstr(std::vector<std::vector<std::string>> csv, std::string header, std::string path)
+    {
+        std::ofstream w(path);
+        if (!w.is_open()) return false;
+        w << header;
+        if (!bool(csv.size())) return true;
+
+        n elems = csv[0].size();
+        for (std::vector<std::string> row : csv)
+        {
+            w << "\n\"" << row[0] << '"';
+            for (n elem = 1; elem < elems; ++elem) w << ",\"" << row[elem] << '"';
         }
 
         return true;
