@@ -1,38 +1,41 @@
 #include <iostream>
-#include "ANNA/ANNA-CPU/MLP-Layer.hpp"
+#include "ANNA/ANNA-CPU/ANNA-CPU.hpp"
 
-void activation(float& x)
-{
-    if ((x >= 1.f) || (x <= -1.f)) x *= 0.7;
-}
+using namespace ANNA_CPU;
+
+constexpr n EPOCHS = 10000;
 
 int main()
 {
-    const n layers = 5;
-    const n dLayers = layers - 1;
-    n scale[layers] = { 2, 8, 8, 4, 2 };
-    n scale_mlp[dLayers] = { 8, 8, 4, 2 };
+    ANNA model({2, 2, 1}, MATH::sigmoid, MATH::sigmoidDv);
+    model.lr = 0.1f;
 
-    MLP::LAYER MLPL[dLayers];
-
-    for (n i = 0; i < dLayers; ++i)
+    std::vector<std::vector<std::vector<float>>> data
     {
-        MLPL[i].create(scale_mlp[i], scale[i]);
-        MLPL[i].setRand();
+        { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+        { { 0 }, { 1 }, { 1 }, { 0 } }
+    };
+    n SAMPLES = data[0].size();
+
+    std::cout << "Starting training...\n";
+    for (n epoch = 0; epoch < EPOCHS; ++epoch)
+    {
+        for (n sample = 0; sample < SAMPLES; ++sample)
+        {
+            model.forward(data[0][sample], true);
+            model.gradDesc(data[1][sample]);
+        }
     }
 
-    float x[2] = { 0.f, 0.f };
-    std::cout << "<< ";
-    std::cin >> x[0] >> x[1];
-    
-
-    MLPL[0].forward({ 1.f, 0.f }, activation);
-    for (n i = 1; i < dLayers; ++i)
-        MLPL[i].forward(MLPL[i - 1].getState(), activation);
-    
-    MLPL[dLayers - 1].softmax();
-    for (float y : MLPL[dLayers - 1].getState())
-        std::cout << y << '\n';
+    std::cout << "Training finished.\n>--- RESULTS ---<\n";
+    for (n sample = 0; sample < SAMPLES; ++sample)
+    {
+        std::cout << "I: " << data[0][sample][0] << " : " << data[0][sample][1] << " => ";
+        model.forward(data[0][sample], false);
+        auto o = model.getOutput();
+        for (float& x : o) std::cout << x;
+        std::cout << '\n'; 
+    }
 
     return 0;
 }

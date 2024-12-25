@@ -9,13 +9,9 @@ namespace MATH
     typedef uint64_t n;
 
     template <typename T>
-    T sigmoid(T x) { return T(1) / (1 + std::exp(-1)); }
+    void sigmoid(T& x) { x = T(1) / (1 + std::exp(-x)); }
     template <typename T>
-    T sigmoidDv(T x)
-    {
-        T sigm = sigmoid(x);
-        return sigm * (1 - sigm);
-    }
+    void sigmoidDv(T& x) { x *= (1 - x); }
 
     template <typename T>
     T ReLU(T x) { return (x > T(0)) ? x : T(0); }

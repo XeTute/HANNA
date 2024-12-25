@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <random>
+#include <iostream>
 
 #include "Math-Fun.hpp"
 
@@ -18,35 +19,35 @@ namespace MLP
 
         std::vector<float> val;
         std::vector<float> bias;
+        std::vector<float> expct_inp;
+
         std::vector<std::vector<float>> weight_ll;
 
         n neurons;
         n neurons_in;
 
+        bool train;
+
     public:
 
-        LAYER(): neurons(0) {}
+        LAYER(): val(0), bias(0), expct_inp(0), weight_ll(0), neurons(0), neurons_in(0), train(false) {}
 
-        void create(n Neurons, n last_layer)
+        void create(n Neurons, n last_layer, bool _train)
         {
             neurons = Neurons;
+            neurons_in = last_layer;
+            train = _train;
+
             val.resize(neurons);
             bias.resize(neurons);
-            weight_ll.resize(neurons);
-
-            neurons_in = last_layer;
-
-            if (last_layer > 0)
-            {
-                for (std::vector<float>& neuron : weight_ll)
-                    neuron.resize(last_layer, 0.f);
-            }
+            weight_ll = std::vector<std::vector<float>>(neurons, std::vector<float>(last_layer, 0.f));
+            
+            if (train) expct_inp.resize(neurons_in);
         }
 
-        void setRand()
+        void rand()
         {
-            float limit = sqrtf(6.f / neurons_in);
-            std::uniform_real_distribution<float> dist(-limit, limit);
+            std::uniform_real_distribution<float> dist(-1.5f, 1.5f);
             std::mt19937 mt(std::random_device{}());
 
             for (std::vector<float>& neuron : weight_ll)
@@ -54,14 +55,47 @@ namespace MLP
             for (float x : bias) x = dist(mt);
         }
 
+        void pretrained(std::vector<float> _bias, std::vector<std::vector<float>> _weight_ll, bool train)
+        {
+            bias = _bias;
+            weight_ll = _weight_ll;
+
+            neurons = bias.size();
+            if (weight_ll.size() > 0) neurons_in = weight_ll[0].size();
+            else neurons_in = 0;
+
+            if (train) expct_inp.resize(neurons_in);
+        }
+
         void forward(const std::vector<float>& input, void (*activation)(float&))
         {
             for (n neuron = 0; neuron < neurons; ++neuron)
             {
                 val[neuron] = bias[neuron];
-                for (n i = 0; i < neurons_in; ++i) val[neuron] += input[i] * weight_ll[neuron][i];
+                for (n i = 0; i < neurons_in; ++i)
+                    val[neuron] += input[i] * weight_ll[neuron][i];
                 activation(val[neuron]);
             }
+        }
+
+        const std::vector<float>& gradDesc(const std::vector<float>& expctd_out, const std::vector<float>& input, void (*activation_dr)(float&), float& lr)
+        {
+            for (float& x : expct_inp) x = 0.f;
+            for (n neuron = 0; neuron < neurons; ++neuron)
+            {
+                float delta = expctd_out[neuron] - val[neuron];
+                activation_dr(val[neuron]);
+                delta *= val[neuron];
+
+                bias[neuron] += delta * lr;
+                for (n neuron_ll = 0; neuron_ll < neurons_in; ++neuron_ll)
+                {
+                    weight_ll[neuron][neuron_ll] += input[neuron_ll] * delta * lr;
+                    expct_inp[neuron_ll] += delta * weight_ll[neuron][neuron_ll];
+                }
+            }
+
+            return expct_inp;
         }
 
         void softmax()
@@ -72,6 +106,17 @@ namespace MLP
         }
 
         const std::vector<float>& getState() const { return val; }
+
+        ~LAYER()
+        {
+            bias.clear();
+            val.clear();
+            weight_ll.clear();
+            expct_inp.clear();
+            
+            neurons = 0;
+            neurons_in = 0;
+        }
     };
 }
 
