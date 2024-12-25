@@ -5,10 +5,9 @@ We're re-designing ANNA to structure the files more logical and the code more ef
 ToDo(see todo.md):
 ---
 ANNA-CPU:
-ANNA-CPU:
-- Init
-- Forward
-- Backward
+- ~init~ replaced with three different constructers, init will be obsolete with the introduction of void birth(...)
+- ~Forward~
+- ~Backward~ replaced with std::vector<float> gradDesc(...)
 - batchForward
 - batchBackward
 - train
