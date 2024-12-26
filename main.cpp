@@ -1,4 +1,6 @@
 #include <iostream>
+#include <chrono>
+
 #include "ANNA/ANNA-CPU/ANNA-CPU.hpp"
 
 using namespace ANNA_CPU;
@@ -7,8 +9,11 @@ constexpr n EPOCHS = 10000;
 
 int main()
 {
-    ANNA model({2, 2, 1}, MATH::sigmoid, MATH::sigmoidDv);
-    model.lr = 0.1f;
+    ANNA model({2, 3, 1}, MATH::sigmoid, MATH::sigmoidDv);
+    
+    bool load = false;
+    std::cout << "> Load?: ";
+    std::cin >> load;
 
     std::vector<std::vector<std::vector<float>>> data
     {
@@ -17,25 +22,50 @@ int main()
     };
     n SAMPLES = data[0].size();
 
-    std::cout << "Starting training...\n";
-    for (n epoch = 0; epoch < EPOCHS; ++epoch)
+    if (load)
     {
-        for (n sample = 0; sample < SAMPLES; ++sample)
+        if (!model.load("model.ANNA", MATH::sigmoid)) std::cerr << "Either didn't select to load model or loading model failed.\n";
+        else std::cout << "Loaded model.\n";
+        model.display();
+    }
+    
+    else
+    {
+        model.lr = 0.1f;
+
+        std::cout << "Starting training...\n";
+        std::chrono::time_point<std::chrono::high_resolution_clock> tp[2] = { std::chrono::high_resolution_clock::now() };
+        for (n epoch = 0; epoch < EPOCHS; ++epoch)
         {
-            model.forward(data[0][sample], true);
-            model.gradDesc(data[1][sample]);
+            for (n sample = 0; sample < SAMPLES; ++sample)
+            {
+                model.forwardForGrad(data[0][sample]);
+                model.gradDesc(data[1][sample]);
+            }
         }
+        tp[1] = std::chrono::high_resolution_clock::now();
+
+        std::cout << "Training finished.\nTook " << std::chrono::duration_cast<std::chrono::milliseconds>(tp[1] - tp[0]).count() << "ms\n>--- RESULTS ---<\n";
     }
 
-    std::cout << "Training finished.\n>--- RESULTS ---<\n";
     for (n sample = 0; sample < SAMPLES; ++sample)
     {
         std::cout << "I: " << data[0][sample][0] << " : " << data[0][sample][1] << " => ";
-        model.forward(data[0][sample], false);
+        model.forward(data[0][sample]);
         auto o = model.getOutput();
         for (float& x : o) std::cout << x;
         std::cout << '\n'; 
     }
+
+    bool save = false;
+    std::cout << "> Save?: ";
+    std::cin >> save;
+    if (save)
+    {
+        if (!model.save("model.ANNA")) std::cerr << "Failed to save ANNA.\n";
+        else std::cout << "Saved ANNA.\n";
+    }
+    else std::cout << "Didn't save.\n";
 
     return 0;
 }

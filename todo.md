@@ -5,8 +5,9 @@ ANNA-CPU:
 - batchForward
 - batchBackward
 - train
-- save
+- ~save~
 - load
+- ~display~ // For debugging & analysis
 
 ANNA-OCL:
 ${ANNA-CPU}-OpenCL version

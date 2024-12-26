@@ -47,7 +47,7 @@ namespace MLP
 
         void rand()
         {
-            std::uniform_real_distribution<float> dist(-1.5f, 1.5f);
+            std::uniform_real_distribution<float> dist(-5.f, 5.f);
             std::mt19937 mt(std::random_device{}());
 
             for (std::vector<float>& neuron : weight_ll)
@@ -61,6 +61,8 @@ namespace MLP
             weight_ll = _weight_ll;
 
             neurons = bias.size();
+            val.reserve(bias.size());
+
             if (weight_ll.size() > 0) neurons_in = weight_ll[0].size();
             else neurons_in = 0;
 
@@ -104,6 +106,9 @@ namespace MLP
             for (float& x : val) sum += expf(x); // https://stackoverflow.com/questions/55458487/stdexpf-and-stdlogf-not-recognized-by-gcc-7-2-0
             for (float& x : val) MATH::softmax(x, x, sum);
         }
+
+        const std::vector<std::vector<float>>& getWeights() const { return weight_ll; }
+        const std::vector<float>& getBias() const { return bias; }
 
         const std::vector<float>& getState() const { return val; }
 
