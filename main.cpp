@@ -26,7 +26,6 @@ int main()
     {
         if (!model.load("model.ANNA", MATH::sigmoid)) std::cerr << "Either didn't select to load model or loading model failed.\n";
         else std::cout << "Loaded model.\n";
-        model.display();
     }
     
     else
