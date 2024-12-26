@@ -12,7 +12,7 @@ ANNA-CPU:
 - batchBackward
 - train
 - ~save~
-- load
+- ~load~
 - ~display~ // For debugging & analysis
 
 ANNA-OCL:
