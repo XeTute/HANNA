@@ -34,10 +34,12 @@ namespace ANNA_CPU
 
             ds = neurons;
             ds.erase(ds.begin());
+            saved = false;
 
             MLPL.resize(dl);
         }
 
+        bool saved = false;
     public:
 
         void (*activation)(float&);
@@ -45,7 +47,7 @@ namespace ANNA_CPU
 
         float lr = 0.1f;
 
-        ANNA() : MLPL(0), tmp_layer(0), scale(0), ds(0), layers(0), dl(0), ddl(0), threads(1) {};
+        ANNA() : MLPL(0), tmp_layer(0), scale(0), ds(0), layers(0), dl(0), ddl(0), threads(1), saved(false) {};
         ANNA(std::vector<n> neurons, void (*_activation)(float&))
         {
             basicInit(neurons, _activation);
@@ -81,14 +83,26 @@ namespace ANNA_CPU
 
             for (n l = 0; l < dl; ++l)
             {
-                w.write(reinterpret_cast<const char*>(MLPL[l].getBias().data()), MLPL[l].getBias().size() * sizeof(float));
-                for (std::vector<float> neuron : MLPL[l].getWeights())
-                    w.write(reinterpret_cast<const char*>(neuron.data()), neuron.size() * sizeof(float));
+                if (!w.write(reinterpret_cast<const char*>(MLPL[l].getBias().data()), MLPL[l].getBias().size() * sizeof(float)))
+                {
+                    std::cerr << "Failed to read: std::ofstream returned false while trying to write binary. " << path << " may be corrupted.\n";
+                    return false;
+                }
+                for (n neuron = 0; neuron < MLPL[l].getWeights().size(); ++neuron)
+                {
+                    if (!w.write(reinterpret_cast<const char*>(MLPL[l].getWeights()[neuron].data()), MLPL[l].getWeights()[neuron].size() * sizeof(float)))
+                    {
+                        std::cerr << "Failed to read: std::ofstream returned false while trying to write binary. " << path << " may be corrupted.\n";
+                        return false;
+                    }
+                }
             }
+            saved = true;
 
             w.close();
             return true;
         }
+        void saveWarning(bool _save) { saved = _save; }
 
         bool load(std::string path, void (*_activation)(float&))
         {
@@ -117,7 +131,7 @@ namespace ANNA_CPU
             for (n l = 0; l < dl; ++l)
             {
                 std::vector<float> bias(mlp_scale[l], 0.f);
-                std::vector<std::vector<float>> weight_ll(mlp_scale[l], std::vector<float>(scale[l], 0.f));
+                std::vector<std::vector<float>> weight_ll(mlp_scale[l], std::vector<float>(scale[l], 1.f));
 
                 if (!r.read(reinterpret_cast<char*>(bias.data()), bias.size() * sizeof(float)))
                 {
@@ -125,7 +139,7 @@ namespace ANNA_CPU
                     return 0;
                 }
 
-                for (std::vector<float> neuron : weight_ll)
+                for (std::vector<float>& neuron : weight_ll)
                 {
                     if (!r.read(reinterpret_cast<char*>(neuron.data()), neuron.size() * sizeof(float)))
                     {
@@ -216,7 +230,58 @@ namespace ANNA_CPU
             n chunkSize = std::ceil(samples / threads);
             n remainder = samples % threads;
 
-            std::vector<ANNA> copy(threads);
+            std::vector<ANNA> copy(threads, *this);
+        }
+
+        void operator=(ANNA other)
+        {
+            if (this == &other) return;
+
+            this->MLPL = other.MLPL;
+            this->tmp_layer = other.tmp_layer;
+            this->scale = other.scale;
+            this->ds = other.ds;
+            this->layers = other.layers;
+            this->dl = other.dl;
+            this->ddl = other.ddl;
+            this->threads = other.threads;
+            this->activation = other.activation;
+            this->activationDV = other.activationDV;
+            this->lr = other.lr;
+        }
+
+        ~ANNA()
+        {
+            if (!saved)
+            {
+                std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\nDo you wish to save the model? (0: No, 1: Yes): ";
+                bool choice = true;
+                std::cin >> choice;
+
+                if (choice)
+                {
+                    std::string filename = std::to_string(reinterpret_cast<std::uintptr_t>(this)) + std::string(".ANNA");
+                    std::cout << "Trying to save under " << filename << "...\n";
+                    if (this->save(filename)) std::cout << "Success.\n";
+                    else std::cerr << "Failed.\n";
+                }
+                else std::cout << "[ANNA-CPU ~ANNA()]: Didn't save the model as per choice.\n";
+            }
+
+            MLPL.clear();
+            tmp_layer.clear();
+            scale.clear();
+            ds.clear();
+
+            layers = 0;
+            dl = 0;
+            ddl = 0;
+            threads = 1;
+
+            activation = nullptr;
+            activationDV = nullptr;
+            
+            lr = 0.1;
         }
     };
 }
