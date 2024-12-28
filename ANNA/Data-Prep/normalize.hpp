@@ -34,57 +34,49 @@ namespace normalize
     }
 
     template <typename T>
-    std::vector<T> minMaxNorm(const std::vector<T>& data)
-    {
-        T mnv = *std::min_element(data.begin(), data.end()); // min val
-        T mxv = *std::max_element(data.begin(), data.end());
-        T d = mxv - mnv; // delta
-        n ne = data.size(); // n elems
-
-        std::vector<T> norm(ne, T(0)); // normalized data
-        for (n i = 0; i < ne; ++i) norm[i] = T(data[i] - mnv) / d;
-        return norm;
-    }
+    struct normConf { T x, y; };
 
     template <typename T>
-    void minMaxNorm(std::vector<T>& data)
+    normConf<T> minMaxNorm(std::vector<T>& data)
     {
-        T mnv = *std::min_element(data.begin(), data.end()); // min val
+        normConf<T> config;
+        config.x = *std::min_element(data.begin(), data.end()); // min val
         T mxv = *std::max_element(data.begin(), data.end());
-        T d = mxv - mnv; // delta
+        config.y = mxv - config.x; // delta
         n ne = data.size(); // n elems
         
-        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - mnv) / d;
+        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
+        return config;
     }
 
     template <typename T>
-    std::vector<T> ZScaleNorm(const std::vector<T>& data)
+    void minMaxNorm(std::vector<T>& data, const normConf<T>& config)
     {
-        n ne = data.size(); // n elems
-        T mean = std::accumulate(data.begin(), data.end(), T(0)) / ne;
-        T stddev = std::sqrt
-        (
-            std::inner_product(data.begin(), data.end(), data.begin(), T(0))
-            / ne - mean * mean
-        );
-
-        std::vector<T> norm(ne); // normalized data
-        for (n i = 0; i < ne; ++i) norm[i] = T(data[i] - mean) / stddev;
-        return norm;
+        n ne = data.size();
+        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
     }
 
     template <typename T>
-    void ZScaleNorm(std::vector<T>& data)
+    normConf<T> ZScaleNorm(std::vector<T>& data)
     {
+        normConf<T> config;
         n ne = data.size(); // n elems
-        T mean = std::accumulate(data.begin(), data.end(), T(0)) / ne;
-        T stddev = std::sqrt
+        config.x = std::accumulate(data.begin(), data.end(), T(0)) / ne;
+        config.y = std::sqrt
         (
             std::inner_product(data.begin(), data.end(), data.begin(), T(0))
-            / ne - mean * mean
+            / ne - config.x * config.x
         );
 
-        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - mean) / stddev;
+        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
+        return config;
+    }
+
+    template <typename T>
+    void ZScaleNorm(std::vector<T>& data, const normConf<T>& config)
+    {
+        n ne = data.size();
+        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
     }
 }
 
