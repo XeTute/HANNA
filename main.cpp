@@ -24,7 +24,7 @@ int main()
 
     if (load)
     {
-        if (!model.load("model.ANNA", MATH::sigmoid)) std::cerr << "Either didn't select to load model or loading model failed.\n";
+        if (!model.load("model.ANNA", MATH::sigmoid)) std::cerr << "Loading model failed.\n";
         else std::cout << "Loaded model.\n";
     }
     
@@ -55,16 +55,6 @@ int main()
         for (float& x : o) std::cout << x;
         std::cout << '\n'; 
     }
-
-    bool save = false;
-    std::cout << "> Save?: ";
-    std::cin >> save;
-    if (save)
-    {
-        if (!model.save("model.ANNA")) std::cerr << "Failed to save ANNA.\n";
-        else std::cout << "Saved ANNA.\n";
-    }
-    else std::cout << "Didn't save.\n";
 
     return 0;
 }
