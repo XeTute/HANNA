@@ -233,7 +233,7 @@ namespace ANNA_CPU
             std::vector<ANNA> copy(threads, *this);
         }
 
-        void operator=(ANNA other)
+        void operator=(const ANNA& other)
         {
             if (this == &other) return;
 
@@ -247,6 +247,7 @@ namespace ANNA_CPU
             this->threads = other.threads;
             this->activation = other.activation;
             this->activationDV = other.activationDV;
+            this->saved = other.saved;
             this->lr = other.lr;
         }
 
@@ -254,7 +255,9 @@ namespace ANNA_CPU
         {
             if (!saved)
             {
-                std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\nDo you wish to save the model? (0: No, 1: Yes): ";
+                std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\n"
+                             "[ANNA-CPU ~ANNA()]: This warning can be turned of using `ANNA::saveWarning(false);`\n"
+                             "[ANNA-CPU ~ANNA()]: Do you wish to save the model? (0: No, 1: Yes): ";
                 bool choice = true;
                 std::cin >> choice;
 
