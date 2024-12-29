@@ -7,25 +7,40 @@
 
 int main()
 {
-    auto data(CSV::loadCSVn<float>("HousingData.csv"));
-    std::vector<float> data_flatten(0);
+    std::vector<std::vector<float>> data(CSV::loadCSVn<float>("HousingDataNormalized.csv"));
+    n samples = 0;
+    n eps = 0; // elems per sample
+    std::vector<std::vector<float>> input;
+    std::vector<std::vector<float>> output;
 
-    n samples = data.size();
-    n eps = data[0].size(); // elements per sample
+    // for (std::vector<float>& sample : data)
+    //     normalize::minMaxNorm(sample, {0, 711});
+    // CSV::saveCSVn<float>(data, "CRIM,ZN,INDUS,CHAS,NOX,RM,AGE,DIS,RAD,TAX,PTRATIO,B,LSTAT,MEDV", "HousingDataNormalized.csv");
 
-    data_flatten.resize(samples * eps);
+    samples = data.size();
+    eps = data[0].size();
+
+    input.resize(samples, std::vector<float>(eps - 1, 0.f));
+    output.resize(samples, std::vector<float>(1, 0.f));
+
     for (n i = 0; i < samples; ++i)
     {
-        for (n elem = 0; elem < eps; ++elem)
-            data_flatten[i * eps + elem] = data[i][elem];
+        output[i] = std::vector<float>(1, data[i][9]); // data[i][9] = TAX
+        data[i].erase(data[i].begin() + 9);
+        input[i] = data[i];
     }
 
-    normalize::normConf<float> data_config(normalize::minMaxNorm(data_flatten));
+    ANNA_CPU::ANNA model({ eps - 1, (eps - 1) / 2, 1 }, MATH::sigmoid, MATH::sigmoidDv);
+    model.lr = 0.075;
+    model.setThreads(6);
+    model.train(input, output, 100);
 
-    std::cout << "samples * eps = " << data_flatten.size() << ", data_config.x: " << data_config.x << ", data_config.y: " << data_config.y << '\n';
-    std::cout << "Example sample:\n";
-    for (n e = 0; e < eps; ++e)
-        std::cout << "E" << e << ": " << data_flatten[e] << '\n';
+    if (!model.save("HousingData.ANNA"))
+    {
+        std::cout << "Failed to save the model. Turning off warning...\n";
+        model.saveWarning(false);
+        std::cout << "Done.\n";
+    }
 
     return 0;
 }

@@ -107,8 +107,8 @@ namespace MLP
             for (float& x : val) MATH::softmax(x, x, sum);
         }
 
-        const std::vector<std::vector<float>>& getWeights() const { return weight_ll; }
-        const std::vector<float>& getBias() const { return bias; }
+        std::vector<std::vector<float>>& getWeights() { return weight_ll; }
+        std::vector<float>& getBias() { return bias; }
 
         const std::vector<float>& getState() const { return val; }
 
@@ -121,6 +121,20 @@ namespace MLP
             
             neurons = 0;
             neurons_in = 0;
+        }
+
+        void operator= (const LAYER& other)
+        {
+            this->val = other.val;
+            this->bias = other.bias;
+            this->expct_inp = other.expct_inp;
+            
+            this->weight_ll = other.weight_ll;
+
+            this->neurons = other.neurons;
+            this->neurons_in = other.neurons_in;
+
+            this->train = other.train;
         }
     };
 }

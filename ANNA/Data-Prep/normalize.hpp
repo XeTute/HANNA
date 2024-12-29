@@ -41,8 +41,7 @@ namespace normalize
     {
         normConf<T> config;
         config.x = *std::min_element(data.begin(), data.end()); // min val
-        T mxv = *std::max_element(data.begin(), data.end());
-        config.y = mxv - config.x; // delta
+        config.y = *std::max_element(data.begin(), data.end()) - config.x; // delta
         n ne = data.size(); // n elems
         
         for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
@@ -53,7 +52,8 @@ namespace normalize
     void minMaxNorm(std::vector<T>& data, const normConf<T>& config)
     {
         n ne = data.size();
-        for (n i = 0; i < ne; ++i) data[i] = T(data[i] - config.x) / config.y;
+        for (n i = 0; i < ne; ++i)
+            data[i] = T(data[i] - config.x) / config.y;
     }
 
     template <typename T>
