@@ -51,21 +51,11 @@ namespace ANNA_CPU
         float lr = 0.1f;
 
         ANNA() : MLPL(0), tmp_layer(0), scale(0), ds(0), layers(0), dl(0), ddl(0), threads(1), saved(false) {};
-        ANNA(std::vector<n> neurons, void (*_activation)(float&))
+        ANNA(std::vector<n> neurons, void (*_activation)(float&)) { this->init(neurons, _activation); }
+        ANNA(std::vector<n> neurons, void (*_activation)(float&), void (*_activationDV)(float&)) { this->init(neurons, _activation, _activationDV); }
+
+        void enableTraining(void (*_activationDV)(float&))
         {
-            basicInit(neurons, _activation);
-
-            for (n l = 0; l < dl; ++l)
-            {
-                MLPL[l].create(ds[l], scale[l], false);
-                MLPL[l].rand();
-            }
-        }
-
-        ANNA(std::vector<n> neurons, void (*_activation)(float&), void (*_activationDV)(float&))
-        {
-            basicInit(neurons, _activation);
-
             activationDV = _activationDV;
             tmp_layer.resize(dl);
 
@@ -74,6 +64,30 @@ namespace ANNA_CPU
                 MLPL[l].create(ds[l], scale[l], true);
                 MLPL[l].rand();
             }
+        }
+
+        void disableTraining()
+        {
+            activationDV = nullptr;
+            tmp_layer.resize(0);
+
+            for (n l = 0; l < dl; ++l)
+            {
+                MLPL[l].create(ds[l], scale[l], false);
+                MLPL[l].rand();
+            }
+        }
+
+        void init(std::vector<n> neurons, void (*_activation)(float&))
+        {
+            basicInit(neurons, _activation);
+            disableTraining();
+        }
+
+        void init(std::vector<n> neurons, void (*_activation)(float&), void (*_activationDV)(float&))
+        {
+            basicInit(neurons, _activation);
+            enableTraining(activationDV);
         }
 
         bool save(std::string path)
@@ -227,42 +241,44 @@ namespace ANNA_CPU
             this->lr = other.lr;
         }
 
-        // ~ANNA()
-        // {
-        //     if (!saved)
-        //     {
-        //         std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\n"
-        //                      "[ANNA-CPU ~ANNA()]: This warning can be turned of using `ANNA::saveWarning(false);`\n"
-        //                      "[ANNA-CPU ~ANNA()]: Do you wish to save the model? (0: No, 1: Yes): ";
-        //         bool choice = true;
-        //         std::cin >> choice;
-// 
-        //         if (choice)
-        //         {
-        //             std::string filename = std::to_string(reinterpret_cast<std::uintptr_t>(this)) + std::string(".ANNA");
-        //             std::cout << "Trying to save under " << filename << "...\n";
-        //             if (this->save(filename)) std::cout << "Success.\n";
-        //             else std::cerr << "Failed.\n";
-        //         }
-        //         else std::cout << "[ANNA-CPU ~ANNA()]: Didn't save the model as per choice.\n";
-        //         saveWarning(false);
-        //     }
-// 
-        //     MLPL.clear();
-        //     tmp_layer.clear();
-        //     scale.clear();
-        //     ds.clear();
-// 
-        //     layers = 0;
-        //     dl = 0;
-        //     ddl = 0;
-        //     threads = 1;
-// 
-        //     activation = nullptr;
-        //     activationDV = nullptr;
-        //     
-        //     lr = 0.1;
-        // }
+        void destruct()
+        {
+            if (!saved)
+            {
+                std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\n"
+                             "[ANNA-CPU ~ANNA()]: This warning can be turned of using `ANNA::saveWarning(false);`\n"
+                             "[ANNA-CPU ~ANNA()]: Do you wish to save the model? (0: No, 1: Yes): ";
+                bool choice = true;
+                std::cin >> choice;
+                
+                if (choice)
+                {
+                    std::string filename = std::to_string(reinterpret_cast<std::uintptr_t>(this)) + std::string(".ANNA");
+                    std::cout << "Trying to save under " << filename << "...\n";
+                    if (this->save(filename)) std::cout << "Success.\n";
+                    else std::cerr << "Failed.\n";
+                }
+                else std::cout << "[ANNA-CPU ~ANNA()]: Didn't save the model as per choice.\n";
+                saveWarning(false);
+            }
+            
+            MLPL.clear();
+            tmp_layer.clear();
+            scale.clear();
+            ds.clear();
+            
+            layers = 0;
+            dl = 0;
+            ddl = 0;
+            threads = 1;
+            
+            activation = nullptr;
+            activationDV = nullptr;
+            
+            lr = 0.1;
+        }
+
+        ~ANNA() {}
     };
 }
 

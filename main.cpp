@@ -5,42 +5,40 @@
 #include "ANNA/Data-Prep/CSV.hpp"
 #include "ANNA/Data-Prep/normalize.hpp"
 
+const std::string dataset_path = "HSC-Small.csv"; // Hate-Speech-Classification
+const n epochs = std::pow(10, 4);
+
 int main()
 {
-    std::vector<std::vector<float>> data(CSV::loadCSVn<float>("HousingDataNormalized.csv"));
-    n samples = 0;
-    n eps = 0; // elems per sample
-    std::vector<std::vector<float>> input;
-    std::vector<std::vector<float>> output;
+    auto data(CSV::loadCSVstr(dataset_path)); // std::vector<std::vector<std::string>>
+    n samples = data.size();
 
-    // for (std::vector<float>& sample : data)
-    //     normalize::minMaxNorm(sample, {0, 711});
-    // CSV::saveCSVn<float>(data, "CRIM,ZN,INDUS,CHAS,NOX,RM,AGE,DIS,RAD,TAX,PTRATIO,B,LSTAT,MEDV", "HousingDataNormalized.csv");
+    std::vector<std::vector<float>> input(samples, std::vector<float>(0));
+    std::vector<std::vector<float>> output(samples, std::vector<float>(1, 0.f));
 
-    samples = data.size();
-    eps = data[0].size();
-
-    input.resize(samples, std::vector<float>(eps - 1, 0.f));
-    output.resize(samples, std::vector<float>(1, 0.f));
-
-    for (n i = 0; i < samples; ++i)
+    for (n s = 0; s < samples; ++s)
     {
-        output[i] = std::vector<float>(1, data[i][9]); // data[i][9] = TAX
-        data[i].erase(data[i].begin() + 9);
-        input[i] = data[i];
-    }
+        n chars = data[s][0].size();
+        input[s].resize(chars);
+        for (n c = 0; c < chars; ++c)
+            input[s][c] = (unsigned int)data[s][0][c]; // To simply get ASCII values, C-Style casts are save?
 
-    ANNA_CPU::ANNA model({ eps - 1, (eps - 1) / 2, 1 }, MATH::sigmoid, MATH::sigmoidDv);
-    model.lr = 0.075;
+        output[s][0] = std::stof(data[s][1]);
+    }
+    std::cout << "Initialized " << samples << " samples.\n";
+
+    ANNA_CPU::ANNA model(std::vector<n>({ 48, 36, 24, 13, 1 }), MATH::sigmoid, MATH::sigmoidDv);
     model.setThreads(6);
-    model.train(input, output, 100);
 
-    if (!model.save("HousingData.ANNA"))
-    {
-        std::cout << "Failed to save the model. Turning off warning...\n";
-        model.saveWarning(false);
-        std::cout << "Done.\n";
-    }
+    std::cout << "Starting training on " << samples << " samples & on " << epochs << " epochs...\n";
+    model.train(input, output, epochs);
+    std::cout << "Training finished...\n";
+
+    if (!model.save(dataset_path.substr(0, dataset_path.size() - 3) + "ANNA"))
+        std::cout << "Failed to save the model =(";
+    else
+        std::cout << "Saved the ANNA model successfully =)";
+    std::cout << std::endl;
 
     return 0;
 }

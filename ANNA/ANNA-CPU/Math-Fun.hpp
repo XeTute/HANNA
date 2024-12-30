@@ -14,9 +14,9 @@ namespace MATH
     void sigmoidDv(T& x) { x *= (1 - x); }
 
     template <typename T>
-    T ReLU(T x) { return (x > T(0)) ? x : T(0); }
+    void ReLU(T& x) { x = (x > T(0)) ? x : T(0); }
     template <typename T>
-    T ReLUDv(T x) { return x; }
+    void ReLUDv(T& x) { return (x >= 0) ? T(1) : T(0); }
 
     // This assumes that the second param is passed in as std::exp(z_sum) to save z_n calculations
     template <typename T>
