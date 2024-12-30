@@ -1,10 +1,10 @@
 ANNA-CPU:
-- ~init~ replaced with three different constructers, init will be obsolete with the introduction of void birth(...)
-- ~Forward~
-- ~Backward~ replaced with std::vector<float> gradDesc(...)
+- ~init~
+- ~forward~
+- ~backward~ replaced with std::vector<float> gradDesc(...)
 - batchForward
 - batchBackward
-- train
+- ~train~
 - ~save~
 - ~load~
 - ~display~ // For debugging & analysis
