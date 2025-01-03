@@ -5,7 +5,6 @@
 #include <cmath>
 #include <vector>
 #include <random>
-#include <iostream>
 
 #include "Math-Fun.hpp"
 
@@ -73,10 +72,11 @@ namespace MLP
         {
             for (n neuron = 0; neuron < neurons; ++neuron)
             {
-                val[neuron] = bias[neuron];
+                float x = bias[neuron];
                 for (n i = 0; i < neurons_in; ++i)
-                    val[neuron] += input[i] * weight_ll[neuron][i];
-                activation(val[neuron]);
+                    x += input[i] * weight_ll[neuron][i];
+                activation(x);
+                val[neuron] = x;
             }
         }
 

@@ -1,13 +1,14 @@
 #ifndef ANNA_CPU_HPP
 #define ANNA_CPU_HPP
 
-#include "MLP-Layer.hpp"
-#include <numeric>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <thread>
-#include <mutex>
+#include <iostream>
+#include <algorithm>
+
+#include "MLP-Layer.hpp"
 
 namespace ANNA_CPU
 {
@@ -25,6 +26,7 @@ namespace ANNA_CPU
         n ddl;
 
         unsigned short threads;
+        bool saved = false;
 
         void basicInit(std::vector<n> neurons, void (*_activation) (float&))
         {
@@ -42,7 +44,6 @@ namespace ANNA_CPU
             MLPL.resize(dl);
         }
 
-        bool saved = false;
     public:
 
         void (*activation)(float&);
@@ -50,7 +51,7 @@ namespace ANNA_CPU
 
         float lr = 0.1f;
 
-        ANNA() : MLPL(0), tmp_layer(0), scale(0), ds(0), layers(0), dl(0), ddl(0), threads(1), saved(false) {};
+        ANNA() : MLPL(0), tmp_layer(0), scale(0), ds(0), layers(0), dl(0), ddl(0), threads(1), saved(false), activation(MATH::none), activationDV(MATH::none) {};
         ANNA(std::vector<n> neurons, void (*_activation)(float&)) { this->init(neurons, _activation); }
         ANNA(std::vector<n> neurons, void (*_activation)(float&), void (*_activationDV)(float&)) { this->init(neurons, _activation, _activationDV); }
 
@@ -61,6 +62,7 @@ namespace ANNA_CPU
 
             for (n l = 0; l < dl; ++l)
             {
+                tmp_layer[l] = std::vector<float>(scale[l]);
                 MLPL[l].create(ds[l], scale[l], true);
                 MLPL[l].rand();
             }
@@ -87,89 +89,19 @@ namespace ANNA_CPU
         void init(std::vector<n> neurons, void (*_activation)(float&), void (*_activationDV)(float&))
         {
             basicInit(neurons, _activation);
-            enableTraining(activationDV);
+            enableTraining(_activationDV);
         }
 
-        bool save(std::string path)
+        n getNParameters()
         {
-            std::ofstream w(path, std::ios::out | std::ios::binary);
-            if (!w.is_open() || !w) return false;
-
-            for (n neurons : scale) w << neurons << ';';
-            w << '\n';
-
-            for (n l = 0; l < dl; ++l)
-            {
-                if (!w.write(reinterpret_cast<const char*>(MLPL[l].getBias().data()), MLPL[l].getBias().size() * sizeof(float)))
-                {
-                    std::cerr << "Failed to read: std::ofstream returned false while trying to write binary. " << path << " may be corrupted.\n";
-                    return false;
-                }
-                for (n neuron = 0; neuron < MLPL[l].getWeights().size(); ++neuron)
-                {
-                    if (!w.write(reinterpret_cast<const char*>(MLPL[l].getWeights()[neuron].data()), MLPL[l].getWeights()[neuron].size() * sizeof(float)))
-                    {
-                        std::cerr << "Failed to read: std::ofstream returned false while trying to write binary. " << path << " may be corrupted.\n";
-                        return false;
-                    }
-                }
-            }
-            saveWarning(false);
-
-            w.close();
-            return true;
+            n params = scale[0];
+            for (n i = 1; i < dl; ++i) params += scale[i] + scale[i] * scale[i - 1];
+            return params;
         }
+
+        bool save(std::string path);
         void saveWarning(bool _save) { saved = !_save; }
-
-        bool load(std::string path, void (*_activation)(float&))
-        {
-            std::ifstream r(path, std::ios::in | std::ios::binary);
-            if (!r.is_open() || !r) return false;
-            r.seekg(0);
-
-            scale = std::vector<n>(0);
-
-            {
-                std::string strBuffer("");
-                std::stringstream ssBuffer("");
-                char charBuffer = 0;
-
-                std::getline(r, strBuffer);
-                ssBuffer = std::stringstream(strBuffer);
-                
-                while (std::getline(ssBuffer, strBuffer, ';'))
-                    scale.push_back(std::stoull(strBuffer));
-            }
-            basicInit(scale, activation);
-
-            std::vector<n> mlp_scale(scale);
-            mlp_scale.erase(mlp_scale.begin());
-
-            for (n l = 0; l < dl; ++l)
-            {
-                std::vector<float> bias(mlp_scale[l], 0.f);
-                std::vector<std::vector<float>> weight_ll(mlp_scale[l], std::vector<float>(scale[l], 1.f));
-
-                if (!r.read(reinterpret_cast<char*>(bias.data()), bias.size() * sizeof(float)))
-                {
-                    std::cerr << "Failed to read: std::ifstream returned false while trying to read binary. ANNA may be corrupted.\n";
-                    return 0;
-                }
-
-                for (std::vector<float>& neuron : weight_ll)
-                {
-                    if (!r.read(reinterpret_cast<char*>(neuron.data()), neuron.size() * sizeof(float)))
-                    {
-                        std::cerr << "Failed to read: std::ifstream returned false while trying to read binary. ANNA may be corrupted.\n";
-                        return 0;
-                    }
-                }
-
-                MLPL[l].pretrained(bias, weight_ll, true);
-            }
-
-            return true;
-        }
+        bool load(std::string path, void (*_activation)(float&));
 
         void display()
         {
@@ -246,11 +178,11 @@ namespace ANNA_CPU
             if (!saved)
             {
                 std::cerr << "[ANNA-CPU ~ANNA()]: The current ANNA model hasn't been saved yet.\n"
-                             "[ANNA-CPU ~ANNA()]: This warning can be turned of using `ANNA::saveWarning(false);`\n"
-                             "[ANNA-CPU ~ANNA()]: Do you wish to save the model? (0: No, 1: Yes): ";
+                    "[ANNA-CPU ~ANNA()]: This warning can be turned of using `ANNA::saveWarning(false);`\n"
+                    "[ANNA-CPU ~ANNA()]: Do you wish to save the model? (0: No, 1: Yes): ";
                 bool choice = true;
                 std::cin >> choice;
-                
+
                 if (choice)
                 {
                     std::string filename = std::to_string(reinterpret_cast<std::uintptr_t>(this)) + std::string(".ANNA");
@@ -261,20 +193,20 @@ namespace ANNA_CPU
                 else std::cout << "[ANNA-CPU ~ANNA()]: Didn't save the model as per choice.\n";
                 saveWarning(false);
             }
-            
+
             MLPL.clear();
             tmp_layer.clear();
             scale.clear();
             ds.clear();
-            
+
             layers = 0;
             dl = 0;
             ddl = 0;
             threads = 1;
-            
+
             activation = nullptr;
             activationDV = nullptr;
-            
+
             lr = 0.1;
         }
 

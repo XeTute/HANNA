@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 
 namespace MATH
 {
@@ -16,7 +17,7 @@ namespace MATH
     template <typename T>
     void ReLU(T& x) { x = (x > T(0)) ? x : T(0); }
     template <typename T>
-    void ReLUDv(T& x) { return (x >= 0) ? T(1) : T(0); }
+    void ReLUDv(T& x) { x = (x >= 0) ? T(1) : T(0); }
 
     // This assumes that the second param is passed in as std::exp(z_sum) to save z_n calculations
     template <typename T>
@@ -24,6 +25,12 @@ namespace MATH
 
     template <typename T>
     void softmax(T& result, T& z_i, T e_z_sum) { z_i = std::exp(z_i) / e_z_sum; }
+
+    template <typename T>
+    void none(T& x)
+    {
+        std::cerr << "Activation Function (maybe Derivative) wasn't initialized.\n";
+    }
 }
 
 #endif
