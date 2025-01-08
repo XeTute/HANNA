@@ -110,7 +110,7 @@ namespace CSV
             else
             {
                 ++elems;
-                log("[CSV::loadCSVstr]: Headers read from " + path + ":\n" + headers, green, false);
+                log("[CSV::loadCSVstr]: Headers red from " + path + ":\n" + headers, green, false);
             }
         }
 

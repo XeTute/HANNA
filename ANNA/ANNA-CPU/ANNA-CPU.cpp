@@ -44,6 +44,50 @@ bool ANNA_CPU::ANNA::load(std::string path, void (*_activation)(float&))
             scale.push_back(std::stoull(strBuffer));
     }
     basicInit(scale, activation);
+    
+    std::vector<n> mlp_scale(scale);
+    mlp_scale.erase(mlp_scale.begin());
+    for (n l = 0; l < dl; ++l)
+    {
+        std::vector<float> bias(mlp_scale[l], 0.f);
+        std::vector<std::vector<float>> weight_ll(mlp_scale[l], std::vector<float>(scale[l], 1.f));
+        if (!r.read(reinterpret_cast<char*>(bias.data()), bias.size() * sizeof(float)))
+        {
+            std::cerr << "Failed to read: std::ifstream returned false while trying to read binary. ANNA may be corrupted.\n";
+            return 0;
+        }
+        for (std::vector<float>& neuron : weight_ll)
+        {
+            if (!r.read(reinterpret_cast<char*>(neuron.data()), neuron.size() * sizeof(float)))
+            {
+                std::cerr << "Failed to read: std::ifstream returned false while trying to read binary. ANNA may be corrupted.\n";
+                return 0;
+            }
+        }
+        MLPL[l].pretrained(bias, weight_ll, true);
+    }
+    return true;
+}
+
+bool ANNA_CPU::ANNA::load(std::string path, void (*_activation)(float&), void (*_activationDV)(float&))
+{
+    std::ifstream r(path, std::ios::in | std::ios::binary);
+    if (!r.is_open() || !r) return false;
+    r.seekg(0);
+    scale = std::vector<n>(0);
+    {
+        std::string strBuffer("");
+        std::stringstream ssBuffer("");
+        char charBuffer = 0;
+        std::getline(r, strBuffer);
+        ssBuffer = std::stringstream(strBuffer);
+        
+        while (std::getline(ssBuffer, strBuffer, ';'))
+            scale.push_back(std::stoull(strBuffer));
+    }
+    basicInit(scale, activation);
+    enableTraining(_activationDV);
+
     std::vector<n> mlp_scale(scale);
     mlp_scale.erase(mlp_scale.begin());
     for (n l = 0; l < dl; ++l)

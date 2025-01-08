@@ -2,71 +2,93 @@
 #include <chrono>
 
 #include "ANNA/ANNA-CPU/ANNA-CPU.hpp"
-#include "ANNA/Data-Prep/CSV.hpp"
 #include "ANNA/Data-Prep/normalize.hpp"
 
-const std::string dataset_path = "HSC-Small.csv"; // Hate-Speech-Classification
-const n epochs = std::pow(10, 4);
+using namespace std::chrono_literals;
 
-// int main()
-// {
-//     auto data(CSV::loadCSVstr(dataset_path)); // std::vector<std::vector<std::string>>
-//     n samples = data.size();
-// 
-//     std::vector<std::vector<float>> input(samples, std::vector<float>(0));
-//     std::vector<std::vector<float>> output(samples, std::vector<float>(1, 0.f));
-// 
-//     for (n s = 0; s < samples; ++s)
-//     {
-//         n chars = data[s][0].size();
-//         input[s].resize(chars);
-//         for (n c = 0; c < chars; ++c)
-//             input[s][c] = (unsigned int)data[s][0][c]; // To simply get ASCII values, C-Style casts are save?
-// 
-//         output[s][0] = std::stof(data[s][1]);
-//     }
-//     std::cout << "Initialized " << samples << " samples.\n";
-// 
-//     ANNA_CPU::ANNA model(std::vector<n>({ 48, 36, 24, 13, 1 }), MATH::sigmoid, MATH::sigmoidDv);
-//     model.setThreads(6);
-// 
-//     std::cout << "Starting training on " << model.getNParameters() << " params, " << samples << " samples & " << epochs << " epochs.\n";
-//     model.train(input, output, epochs);
-//     std::cout << "Training finished...\n";
-// 
-//     if (!model.save(dataset_path.substr(0, dataset_path.size() - 3) + "ANNA"))
-//         std::cout << "Failed to save the model =(";
-//     else
-//         std::cout << "Saved the ANNA model successfully =)";
-//     std::cout << std::endl;
-// 
-//     model.saveWarning(false);
-//     model.destruct();
-// 
-//     return 0;
-// }
+const std::string dataset_path = "tiny-shakespeare.txt";
+const n epochs = 1;
+const n ctx_lngth = 128;
+
+typedef std::vector<std::vector<float>> a2d;
+
+void loadDataIntoString(std::string& o)
+{
+    std::ifstream r(dataset_path);
+    std::string buf;
+
+    r.seekg(0);
+    o = "";
+
+    while (std::getline(r, buf))
+        o += buf + '\n';
+}
 
 int main()
 {
-    std::vector<std::vector<std::vector<float>>> data =
-    {
-        { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
-        { { 0 }, { 1 }, { 1 }, { 0 } }
-    };
+    std::string datastr;
+    loadDataIntoString(datastr);
 
-    ANNA_CPU::ANNA model;
-    model.init({2, 3, 1}, MATH::sigmoid, MATH::sigmoidDv);
+    n samples = std::min(datastr.size(), size_t(std::pow(10, 6)));
+
+    // Convert string seq. to trainable data for prediction
+    std::vector<a2d> data(2, a2d(samples));
+    for (n s = 0; s < samples; ++s)
+    {
+        n min = std::min(ctx_lngth, s);
+        data[0][s] = std::vector<float>(ctx_lngth, 0.f);
+        data[1][s] = std::vector<float>(255, 0.f);
+
+        for (n c = 0; c < min; ++c) data[0][s][c] = (float)datastr[c + s];
+        data[1][s][datastr[s + min]] = 10.f;
+    }
+
+    normalize::normConf<float> conf;
+    {
+        std::vector<float> seq(255, 0.f);
+        for (n i = 0; i < 255; ++i) seq[i] = float(i);
+        conf = normalize::minMaxNorm(seq);
+    }
+    for (std::vector<float>& sample : data[0])
+        normalize::minMaxNorm(sample, conf);
+
+    ANNA_CPU::ANNA model({ ctx_lngth, ctx_lngth / 2, ctx_lngth / 3, 255 }, MATH::sigmoid, MATH::sigmoidDv);
+    model.lr = 0.01;
+    model.setThreads(6);
+    std::cout << model.getNParameters() << " Parameters will be trained on " << samples << '.';
     
-    std::cout << "Starting training on ANNA model with " << model.getNParameters() << " params.\n";
-    model.setThreads(1);
+    std::chrono::high_resolution_clock::time_point tp[2] = { std::chrono::high_resolution_clock::now() };
     model.train(data[0], data[1], epochs);
-    model.lr = 0.1f;
+    tp[1] = std::chrono::high_resolution_clock::now();
+    std::cout << "\nTook " << std::chrono::duration_cast<std::chrono::milliseconds>(tp[1] - tp[0]).count() << "ms.";
 
-    for (n s = 0; s < 4; ++s) // Very sorry for ppl who don't like hard-coded limits
+    while (true) // Inference, assuming the input is under ctx_lngth - 8 characters long
     {
-        model.forward(data[0][s]);
-        std::cout << "INP " << data[0][s][0] << " : " << data[0][s][1] << '\n';
-        std::cout << "OUT " << data[1][s][0] << " : " << model.getOutput()[0] << "\n---\n";
+        std::string inpstr;
+        std::vector<float> inp(ctx_lngth, 0.f);
+        
+        std::cout << "\n> ";
+        std::getline(std::cin, inpstr);
+        for (n c = 0; c < inpstr.size(); ++c) inp[c] = (float)inpstr[c];
+
+        for (n gen = 0; gen < 8; ++gen)
+        {
+            model.forward(inp);
+
+            float out = 0.f;
+            float oldmax = 0.f;
+            for (n i = 0; i < 255; ++i)
+            {
+                if (oldmax < model.getOutput()[i])
+                {
+                    oldmax = model.getOutput()[i];
+                    out = i;
+                }
+            }
+
+            std::cout << (char)out;
+            inp[inpstr.size() + gen] = out;
+        }
     }
 
     return 0;

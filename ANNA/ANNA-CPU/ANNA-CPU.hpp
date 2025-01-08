@@ -102,6 +102,7 @@ namespace ANNA_CPU
         bool save(std::string path);
         void saveWarning(bool _save) { saved = !_save; }
         bool load(std::string path, void (*_activation)(float&));
+        bool load(std::string path, void (*_activation)(float&), void (*_activationDV)(float&));
 
         void display()
         {
