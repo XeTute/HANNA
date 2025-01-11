@@ -5,10 +5,12 @@
 #include <cmath>
 #include <vector>
 #include <random>
+#include <memory>
+#include <thread>
 
 #include "Math-Fun.hpp"
 
-using n = uint64_t;
+using n = size_t;
 
 namespace MLP
 {
@@ -22,27 +24,34 @@ namespace MLP
 
         std::vector<std::vector<float>> weight_ll;
 
-        n neurons;
-        n neurons_in;
+        n neurons, neurons_in;
+        n threads, iterations, iremainder;
 
-        bool train;
+        void forwardNeuron(const std::vector<float>& input, void (*activation) (float&), n neuron)
+        {
+            float x = bias[neuron];
+            for (n i = 0; i < neurons_in; ++i)
+                x += input[i] * weight_ll[neuron][i];
+            activation(x);
+            val[neuron] = x;
+        }
 
     public:
 
-        LAYER(): val(0), bias(0), expct_inp(0), weight_ll(0), neurons(0), neurons_in(0), train(false) {}
+        LAYER(): val(0), bias(0), expct_inp(0), weight_ll(0), neurons(0), neurons_in(0), threads(1), iterations(0), iremainder(0) {}
 
-        void create(n Neurons, n last_layer, bool _train)
+        void create(n Neurons, n last_layer)
         {
             neurons = Neurons;
             neurons_in = last_layer;
-            train = _train;
 
             val.resize(neurons);
             bias.resize(neurons);
             weight_ll = std::vector<std::vector<float>>(neurons, std::vector<float>(last_layer, 0.f));
-            
-            if (train) expct_inp.resize(neurons_in);
         }
+
+        void enableTraining() { expct_inp.resize(neurons_in); }
+        void disableTraining() { expct_inp.resize(0); }
 
         void rand()
         {
@@ -51,10 +60,10 @@ namespace MLP
 
             for (std::vector<float>& neuron : weight_ll)
                 for (float& x : neuron) x = dist(mt);
-            for (float x : bias) x = dist(mt);
+            for (float& x : bias) x = dist(mt);
         }
 
-        void pretrained(std::vector<float> _bias, std::vector<std::vector<float>> _weight_ll, bool train)
+        void pretrained(std::vector<float> _bias, std::vector<std::vector<float>> _weight_ll)
         {
             bias = _bias;
             weight_ll = _weight_ll;
@@ -64,20 +73,36 @@ namespace MLP
 
             if (weight_ll.size() > 0) neurons_in = weight_ll[0].size();
             else neurons_in = 0;
-
-            if (train) expct_inp.resize(neurons_in);
         }
 
-        void forward(const std::vector<float>& input, void (*activation)(float&))
+        void setThreads(n& _threads)
         {
-            for (n neuron = 0; neuron < neurons; ++neuron)
+            threads = _threads;
+            iterations = n(std::ceil(double(neurons / threads)));
+            iremainder = n(neurons - (iterations * threads));
+        }
+
+        void forward(const std::vector<float>& input, void (*activation)(float&), n& _threads)
+        {
+            std::vector<std::thread> tp(_threads);
+
+            n neuron = 0;
+            for (n i = 0; i < iterations; ++i)
             {
-                float x = bias[neuron];
-                for (n i = 0; i < neurons_in; ++i)
-                    x += input[i] * weight_ll[neuron][i];
-                activation(x);
-                val[neuron] = x;
+                for (n t = 0; t < threads; ++t)
+                {
+                    tp[t] = std::thread(&LAYER::forwardNeuron, this, input, activation, neuron);
+                    ++neuron;
+                }
+                for (n t = 0; t < threads; ++t) if (tp[t].joinable()) tp[t].join();
             }
+
+            for (n t = 0; t < iremainder; ++t)
+            {
+                tp[t] = std::thread(&LAYER::forwardNeuron, this, input, activation, neuron);
+                ++neuron;
+            }
+            for (n t = 0; t < iremainder; ++t) if (tp[t].joinable()) tp[t].join();
         }
 
         const std::vector<float>& gradDesc(const std::vector<float>& expctd_out, const std::vector<float>& input, void (*activation_dr)(float&), float& lr)
@@ -85,9 +110,10 @@ namespace MLP
             for (float& x : expct_inp) x = 0.f;
             for (n neuron = 0; neuron < neurons; ++neuron)
             {
-                float delta = expctd_out[neuron] - val[neuron];
-                activation_dr(val[neuron]);
-                delta *= val[neuron];
+                float _val = val[neuron];
+                float delta = expctd_out[neuron] - _val;
+                activation_dr(_val);
+                delta *= _val;
 
                 bias[neuron] += delta * lr;
                 for (n neuron_ll = 0; neuron_ll < neurons_in; ++neuron_ll)
@@ -125,16 +151,17 @@ namespace MLP
 
         void operator= (const LAYER& other)
         {
-            this->val = other.val;
-            this->bias = other.bias;
-            this->expct_inp = other.expct_inp;
-            
-            this->weight_ll = other.weight_ll;
+            if (this != &other)
+            {
+                this->val = other.val;
+                this->bias = other.bias;
+                this->expct_inp = other.expct_inp;
 
-            this->neurons = other.neurons;
-            this->neurons_in = other.neurons_in;
+                this->weight_ll = other.weight_ll;
 
-            this->train = other.train;
+                this->neurons = other.neurons;
+                this->neurons_in = other.neurons_in;
+            }
         }
     };
 }
