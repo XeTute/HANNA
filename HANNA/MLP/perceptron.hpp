@@ -1,74 +1,78 @@
 #ifndef PERCEPTRON_HPP
 #define PERCEPTRON_HPP
 
-#include <cstdint>
 #include <fstream>
-#include <random>
-#include <string>
-#include "Eigen/Dense"
+
+#include "whitebox.hpp"
 
 namespace PERCEPTRON
 {
-	using n = size_t;
+	using wb::n;
 	using str = const char*;
-	using constVecRef = const Eigen::VectorXf&;
+	using constVecRef = const wb::effarr<float>&;
 
 	class LAYER
 	{
 	private:
 		n i, o; // input output, input = neurons last layer, output = neurons this layer
 
-		Eigen::VectorXf val, bias;
-		Eigen::VectorXf delta, expected_input;
-		Eigen::MatrixXf weight; // Connecting the last and `this` layer.
+		wb::effarr<float> val, bias;
+		wb::effarr<float> delta, expected_input;
+		wb::effarr<wb::effarr<float>> weight; // Connecting the last and `this` layer.
 
-		void alloc()
+		bool alloc()
 		{
-			val.resize(o);
-			bias.resize(o);
-			weight.resize(o, i);
+			if (!val.resize(o)) return false;
+			if (!bias.resize(o)) return false;
+			if (!weight.resize(o)) return false;
+			for (n neuron = 0; neuron < o; ++neuron)
+			{
+				weight[neuron].forceResetWithoutFree();
+				if (!weight[neuron].resize(i)) return false;
+			}
+			return true;
 		}
 
-		void randomParams()
+		void random()
 		{
-			n t = Eigen::nbThreads();
-			Eigen::setNbThreads(0);
-
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_real_distribution<float> dist(-1.f, 1.f);
-
-			auto randomize = [&]() { return dist(gen); };
-			bias = Eigen::VectorXf::NullaryExpr(o, randomize);
-			weight = Eigen::MatrixXf::NullaryExpr(o, i, randomize);
-
-			Eigen::setNbThreads(t);
+			val.random();
+			bias.random();
+			for (n neuron = 0; neuron < o; ++neuron)
+				weight[neuron].random();
 		}
+
 	public:
-		LAYER() : i(0), o(0) {}
+		LAYER() : i(0), o(0), val(0), bias(0), delta(0), expected_input(0), weight(0) {}
 		LAYER(n input, n output) { birth(input, output); }
 
-		void birth(n input, n output)
+		bool enableTraining()
 		{
-			i = input;
-			o = output;
-
-			alloc();
-			randomParams();
-			disableTraining();
-		}
-		void setThreads(n threads) { Eigen::setNbThreads(threads); }
-
-		void enableTraining()
-		{
-			delta.resize(o);
-			expected_input.resize(i);
+			if (!delta.resize(o)) return false;
+			if (!expected_input.resize(i)) return false;
+			return true;
 		}
 
 		void disableTraining()
 		{
 			delta.resize(0);
 			expected_input.resize(0);
+		}
+
+		bool birth(n input, n output)
+		{
+			i = input, o = output;
+			if (!alloc()) return false;
+			random();
+			return true;
+		}
+
+		void suicide()
+		{
+			i = 0, o = 0;
+			val.resize(0);
+			bias.resize(0);
+			for (n neuron = 0; neuron < o; ++neuron)
+				weight[o].resize(0);
 		}
 
 		bool save(str path)
@@ -80,7 +84,8 @@ namespace PERCEPTRON
 			if (!w.is_open() || !w) return false;
 			if (!w.write((const char*)&i, sn)) return false;
 			if (!w.write((const char*)&o, sn)) return false;
-			if (!w.write((const char*)weight.data(), sf * o * i)) return false;
+			for (n neuron = 0; neuron < o; ++neuron)
+				if (!w.write((const char*)weight[neuron].data(), sf * i)) return false;
 			if (!w.write((const char*)bias.data(), sf * o)) return false;
 
 			return true;
@@ -97,48 +102,11 @@ namespace PERCEPTRON
 			if (!r.read((char*)&o, sn)) return false;
 
 			alloc();
-			if (!r.read((char*)weight.data(), sf * o * i)) return false;
+			for (n neuron = 0; neuron < o; ++neuron)
+				if (!r.read((char*)weight[neuron].data(), sf * i)) return false;
 			if (!r.read((char*)bias.data(), sf * o)) return false;
 
 			return true;
-		}
-
-		void forward(constVecRef input, float (*activation) (float))
-		{
-			val = (weight * input) + bias;
-			val.unaryExpr(activation);
-		}
-
-		void forward(constVecRef input, Eigen::VectorXf& output, float (*activation) (float))
-		{
-			forward(input, activation);
-			output = val;
-		}
-
-		constVecRef gradDesc(constVecRef last_input, constVecRef expected_output, float (*activatioDV) (float), const float& lr)
-		{
-			expected_input.setZero();
-
-			delta = expected_output - val;
-			val.unaryExpr(activatioDV);
-			delta = delta.array() * val.array();
-
-			bias += delta * lr;
-			weight += last_input * delta.transpose() * lr;
-			expected_input += delta * weight;
-
-			return expected_input;
-		}
-
-		void suicide()
-		{
-			i = 0, o = 0;
-
-			val.resize(0);
-			bias.resize(0);
-			weight.resize(0, 0);
-
-			disableTraining();
 		}
 
 		~LAYER() { suicide(); }

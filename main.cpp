@@ -10,15 +10,9 @@ float activation(float x) { return x; }
 int main()
 {
 	PERCEPTRON::LAYER model;
-	model.birth(6, 1);
-	model.setThreads(6);
-
-	Eigen::Vector<float, 6> input = { 10, 20, 30, 40, 50, 60 };
-	Eigen::VectorXf output;
-
-	model.forward(input, output, activation);
-	std::cout << output << '\n';
-
+	if (model.birth(6, 1)) std::cout << "Success\n";
+	else std::cout << "Fail\n";
+	
 	model.suicide();
 	return 0;
 }
