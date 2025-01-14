@@ -3,8 +3,12 @@
 
 #include "perceptron.hpp"
 
-class MLP
+namespace MLP
 {
-
-};
+	class MLP
+	{
+	private:
+		wb::effarr<PERCEPTRON::LAYER> a;
+	};
+}
 #endif

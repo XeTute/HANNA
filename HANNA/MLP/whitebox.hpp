@@ -8,7 +8,7 @@
 
 namespace wb
 {
-	using n = unsigned long long;
+	using n = long long int; // Thank omp for not letting that be signed
 
 	template <typename _ty>
 	class effarr
@@ -66,13 +66,14 @@ namespace wb
 			if (!newaddr) return false;
 
 			if (mem && (size != 0)) std::copy(mem, mem + std::min(s, size), newaddr);
+			if (mem) std::free(mem);
 			mem = newaddr;
 			size = s;
 
 			return true;
 		}
 
-		void setX(_ty& x)
+		void setX(_ty x)
 		{
 #pragma omp parallel for
 			for (n e = 0; e < size; ++e) mem[e] = x;
@@ -96,21 +97,33 @@ namespace wb
 		// Operators
 		_ty& operator[] (const n& i) { return mem[i]; }
 
-		void apply(void (*f) (_ty&, const _ty&), const effarr<_ty>& i)
+		void apply(void (*f) (_ty&))
+		{
+#pragma omp parallel for
+			for (n e = 0; e < size; ++e) f(mem[e]);
+		}
+
+		void apply(void (*f) (_ty&, _ty&), effarr<_ty>& i)
 		{
 #pragma omp parallel for
 			for (n e = 0; e < size; ++e) f(mem[e], i[e]);
 		}
 
-		void operator+= (effarr<_ty>& i) { apply([](_ty& a, const _ty& b) { a += b; }, i); }
-		void operator-= (effarr<_ty>& i) { apply([](_ty& a, const _ty& b) { a -= b; }, i); }
-		void operator*= (effarr<_ty>& i) { apply([](_ty& a, const _ty& b) { a *= b; }, i); }
-		void operator/= (effarr<_ty>& i) { apply([](_ty& a, const _ty& b) { a /= b; }, i); }
+		void apply(void (*f) (_ty&, _ty&), _ty& i)
+		{
+#pragma omp parallel for
+			for (n e = 0; e < size; ++e) f(mem[e], i);
+		}
+
+		void operator+= (effarr<_ty>& i) { apply([](_ty& a, _ty& b) { a += b; }, i); }
+		void operator-= (effarr<_ty>& i) { apply([](_ty& a, _ty& b) { a -= b; }, i); }
+		void operator*= (effarr<_ty>& i) { apply([](_ty& a, _ty& b) { a *= b; }, i); }
+		void operator*= (_ty& i) { apply([](_ty& a, _ty& b) { a *= b; }, i); }
+		void operator/= (effarr<_ty>& i) { apply([](_ty& a, _ty& b) { a /= b; }, i); }
 
 		void operator= (const effarr<_ty>& i)
 		{
-			dealloc();
-			size = i.size;
+			resize(i.size);
 			std::copy(i.mem, i.mem + size, mem);
 		}
 

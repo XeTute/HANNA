@@ -9,14 +9,13 @@ namespace PERCEPTRON
 {
 	using wb::n;
 	using str = const char*;
-	using constVecRef = const wb::effarr<float>&;
 
 	class LAYER
 	{
 	private:
 		n i, o; // input output, input = neurons last layer, output = neurons this layer
 
-		wb::effarr<float> val, bias;
+		wb::effarr<float> val, bias, tmp_inp;
 		wb::effarr<float> delta, expected_input;
 		wb::effarr<wb::effarr<float>> weight; // Connecting the last and `this` layer.
 
@@ -30,6 +29,7 @@ namespace PERCEPTRON
 				weight[neuron].forceResetWithoutFree();
 				if (!weight[neuron].resize(i)) return false;
 			}
+			if (!tmp_inp.resize(i)) return false;
 			return true;
 		}
 
@@ -41,8 +41,15 @@ namespace PERCEPTRON
 				weight[neuron].random();
 		}
 
+		float dot(wb::effarr<float>& a, n& max)
+		{
+			float returnval = 0.f;
+			for (n e = 0; e < max; ++e) returnval += a[e];
+			return returnval;
+		}
+
 	public:
-		LAYER() : i(0), o(0), val(0), bias(0), delta(0), expected_input(0), weight(0) {}
+		LAYER() : i(0), o(0), val(0), bias(0), tmp_inp(0), delta(0), expected_input(0), weight(0) {}
 		LAYER(n input, n output) { birth(input, output); }
 
 		bool enableTraining()
@@ -107,6 +114,43 @@ namespace PERCEPTRON
 			if (!r.read((char*)bias.data(), sf * o)) return false;
 
 			return true;
+		}
+
+		void forward(const wb::effarr<float>& input, void (*activation) (float&))
+		{
+			for (n neuron = 0; neuron < o; ++neuron)
+			{
+				tmp_inp = input;
+				tmp_inp *= weight[neuron];
+				val[neuron] = dot(tmp_inp, i);
+			}
+			val += bias;
+			val.apply(activation);
+		}
+		const wb::effarr<float>& getCS() { return val; }
+		const wb::effarr<float>& inference(const wb::effarr<float>& input, void (*activation) (float&))
+		{
+			forward(input, activation);
+			return getCS();
+		}
+
+		const wb::effarr<float>& gradDesc(const wb::effarr<float>& last_input, const wb::effarr<float>& expected_output, void (*activationDV) (float&), float& lr)
+		{
+			expected_input.setX(0.f);
+
+			delta = expected_output;
+			delta -= val;
+			delta.apply(activationDV);
+
+			bias += delta;
+			bias *= lr;
+
+			for (n neuron = 0; neuron < o; ++neuron)
+			{
+
+			}
+
+			return expected_input;
 		}
 
 		~LAYER() { suicide(); }
