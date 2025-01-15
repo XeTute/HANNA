@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 
 #include "HANNA/HANNA.hpp"
 
@@ -6,18 +6,46 @@
 // Test-Code licensed under MIT, HANNA Library under Apache2.0, and multi for Eigen
 // Port to OpenCL expected in four - x months.
 
-void activation(float& x) { x = x; }
+void ReLU(float& x) { x = (x > 0) ? x : 0; }
+void ReLUDV(float& x) { x = (x > 0) ? 1.f : x; }
+
+void sigmoid(float& x) { x = 1.f / (1.f + std::exp(-x)); }
+void sigmoidDV(float& x) { x *= (1 - x); }
+
+/*
+  Current Problem: Output always ~0.49999 for all inputs after training
+*/
+
 int main()
 {
-	PERCEPTRON::LAYER model;
-	if (model.birth(6, 1)) std::cout << "Success\n";
-	else std::cout << "Fail\n";
-	
-	wb::effarr<float> input(6, 2.f);
-	input = model.inference(input, activation);
+	MLP::MLP net({ 2, 3, 1 });
+	omp_set_num_threads(1);
 
-	std::cout << input[0] << '\n';
+	std::vector<std::vector<std::vector<float>>> data =
+	{
+		{ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+		{ { 0 }, { 1 }, { 1 }, { 0 }}
+	};
+	float lr = 0.1f;
+	PERCEPTRON::n epochs = 100000;
 
-	model.suicide();
+	for (PERCEPTRON::n s = 0; s < 4; ++s)
+	{
+		std::cout << "---\nInput: " << data[0][s][0] << " : " << data[0][s][1] << '\n';
+		net.forward(data[0][s], sigmoid);
+		std::cout << "Output: " << net.out()[0] << '\n';
+	}
+
+	net.enableTraining();
+	net.train(data[0], data[1], sigmoid, sigmoidDV, lr, epochs);
+	net.disableTraining();
+
+	for (PERCEPTRON::n s = 0; s < 4; ++s)
+	{
+		std::cout << "---\nInput: " << data[0][s][0] << " : " << data[0][s][1] << '\n';
+		net.forward(data[0][s], sigmoid);
+		std::cout << "Output: " << net.out()[0] << '\n';
+	}
+
 	return 0;
 }

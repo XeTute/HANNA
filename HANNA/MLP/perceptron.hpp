@@ -2,12 +2,13 @@
 #define PERCEPTRON_HPP
 
 #include <fstream>
-
-#include "whitebox.hpp"
+#include <omp.h>
+#include <random>
+#include <vector>
 
 namespace PERCEPTRON
 {
-	using wb::n;
+	using n = long long int; // Thank omp for not allowing signed
 	using str = const char*;
 
 	class LAYER
@@ -15,53 +16,41 @@ namespace PERCEPTRON
 	private:
 		n i, o; // input output, input = neurons last layer, output = neurons this layer
 
-		wb::effarr<float> val, bias, tmp_inp;
-		wb::effarr<float> delta, expected_input;
-		wb::effarr<wb::effarr<float>> weight; // Connecting the last and `this` layer.
+		std::vector<float> val, bias;
+		std::vector<float> expected_input;
+		std::vector<std::vector<float>> weight; // Connecting the last and `this` layer.
 
 		bool alloc()
 		{
-			if (!val.resize(o)) return false;
-			if (!bias.resize(o)) return false;
-			if (!weight.resize(o)) return false;
-			for (n neuron = 0; neuron < o; ++neuron)
-			{
-				weight[neuron].forceResetWithoutFree();
-				if (!weight[neuron].resize(i)) return false;
-			}
-			if (!tmp_inp.resize(i)) return false;
+			val.resize(o);
+			bias.resize(o);
+			weight.resize(o);
+			for (std::vector<float>& vec : weight)
+				vec.resize(i);
 			return true;
 		}
 
 		void random()
 		{
-			val.random();
-			bias.random();
-			for (n neuron = 0; neuron < o; ++neuron)
-				weight[neuron].random();
-		}
+			std::mt19937 gen(std::random_device{}());
+			std::uniform_real_distribution<float> dist(-1.f, 1.f);
 
-		float dot(wb::effarr<float>& a, n& max)
-		{
-			float returnval = 0.f;
-			for (n e = 0; e < max; ++e) returnval += a[e];
-			return returnval;
+			for (float& x : bias) x = dist(gen);
+			for (std::vector<float>& vec : weight)
+				for (float& x : vec) x = dist(gen);
 		}
 
 	public:
-		LAYER() : i(0), o(0), val(0), bias(0), tmp_inp(0), delta(0), expected_input(0), weight(0) {}
+		LAYER() : i(0), o(0), val(0), bias(0), expected_input(0), weight(0) {}
 		LAYER(n input, n output) { birth(input, output); }
 
-		bool enableTraining()
+		void enableTraining()
 		{
-			if (!delta.resize(o)) return false;
-			if (!expected_input.resize(i)) return false;
-			return true;
+			expected_input.resize(i);
 		}
 
 		void disableTraining()
 		{
-			delta.resize(0);
 			expected_input.resize(0);
 		}
 
@@ -91,8 +80,8 @@ namespace PERCEPTRON
 			if (!w.is_open() || !w) return false;
 			if (!w.write((const char*)&i, sn)) return false;
 			if (!w.write((const char*)&o, sn)) return false;
-			for (n neuron = 0; neuron < o; ++neuron)
-				if (!w.write((const char*)weight[neuron].data(), sf * i)) return false;
+			for (std::vector<float>& vec : weight)
+				if (!w.write((const char*)vec.data(), sf * i)) return false;
 			if (!w.write((const char*)bias.data(), sf * o)) return false;
 
 			return true;
@@ -109,49 +98,50 @@ namespace PERCEPTRON
 			if (!r.read((char*)&o, sn)) return false;
 
 			alloc();
-			for (n neuron = 0; neuron < o; ++neuron)
-				if (!r.read((char*)weight[neuron].data(), sf * i)) return false;
+			for (std::vector<float>& vec : weight)
+				if (!r.read((char*)vec.data(), sf * i)) return false;
 			if (!r.read((char*)bias.data(), sf * o)) return false;
 
 			return true;
 		}
 
-		void forward(const wb::effarr<float>& input, void (*activation) (float&))
+		void forward(const std::vector<float>& input, void (*activation) (float&))
 		{
+#pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 			{
-				tmp_inp = input;
-				tmp_inp *= weight[neuron];
-				val[neuron] = dot(tmp_inp, i);
+				float tmpval = bias[neuron];
+				for (n nll = 0; nll < i; ++nll)
+					tmpval += weight[neuron][nll] * input[nll];
+				activation(tmpval);
+				val[neuron] = tmpval;
 			}
-			val += bias;
-			val.apply(activation);
 		}
-		const wb::effarr<float>& getCS() { return val; }
-		const wb::effarr<float>& inference(const wb::effarr<float>& input, void (*activation) (float&))
+		const std::vector<float>& getCS() { return val; } // CS current state
+
+		const std::vector<float>& gradDesc(const std::vector<float>& last_input, const std::vector<float>& expected_output, void (*activationDV) (float&), const float& lr)
 		{
-			forward(input, activation);
-			return getCS();
-		}
-
-		const wb::effarr<float>& gradDesc(const wb::effarr<float>& last_input, const wb::effarr<float>& expected_output, void (*activationDV) (float&), float& lr)
-		{
-			expected_input.setX(0.f);
-
-			delta = expected_output;
-			delta -= val;
-			delta.apply(activationDV);
-
-			bias += delta;
-			bias *= lr;
-
+#pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 			{
+				float tmpval = val[neuron];
+				float delta = expected_output[neuron] - tmpval;
+				activationDV(tmpval);
+				delta *= tmpval;
 
+				float deltalr = delta * lr;
+				bias[neuron] += deltalr;
+
+				for (n nll = 0; nll < i; ++nll)
+				{
+					weight[neuron][nll] += deltalr * last_input[nll];
+					expected_input[nll] += delta * weight[neuron][nll];
+				}
 			}
 
 			return expected_input;
 		}
+		const std::vector<float>& lei() { return expected_input; } // last expected input
 
 		~LAYER() { suicide(); }
 	};
