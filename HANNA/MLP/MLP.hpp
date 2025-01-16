@@ -3,6 +3,9 @@
 
 #include <cmath>
 #include <iostream>
+#include <cstring>
+#include <string>
+#include <filesystem>
 #include "perceptron.hpp"
 
 namespace MLP
@@ -94,6 +97,41 @@ namespace MLP
 					gradDesc(output[s], activationDV, lr);
 				}
 			}
+		}
+
+		bool save(PERCEPTRON::str path)
+		{
+			std::filesystem::create_directory(path);
+			std::ofstream w(std::string(path) + std::string("/DNA.MLP"), std::ios::out | std::ios::binary);
+			if (!w || !w.is_open()) return false;
+
+			if ( !w.write((const char*)&l, sizeof(l)) ) return false;
+			if ( !w.write((const char*)ls.data(), sizeof(ls[0]) * ls.size()) ) return false;
+			w.close();
+
+			std::string tmppath = std::string(path) + std::string("/LAYER");
+			for (n layer = 0; layer < dl; ++layer)
+				if ( !perc[layer].save((tmppath + std::to_string(layer) + std::string(".MLP")).c_str()) ) return false;
+			return true;
+		}
+
+		bool load(PERCEPTRON::str path)
+		{
+			std::ifstream r(std::string(path) + std::string("/DNA.MLP"), std::ios::in | std::ios::binary);
+			if (!r || !r.is_open()) return false;
+
+			if ( !r.read((char*)&l, sizeof(l)) ) return false;
+			ls.resize(l);
+			dl = l - 1;
+			ddl = dl - 1;
+			dddl = ddl - 1;
+			if ( !r.read((char*)ls.data(), sizeof(ls[0]) * ls.size()) ) return false;
+			alloc();
+
+			std::string tmppath = std::string(path) + std::string("/LAYER");
+			for (n layer = 0; layer < dl; ++layer)
+				if ( !perc[layer].load((tmppath + std::to_string(layer) + std::string(".MLP")).c_str()) ) return false;
+			return true;
 		}
 
 		~MLP()
