@@ -27,14 +27,7 @@ int main()
 		{ { 0 }, { 1 }, { 1 }, { 0 }}
 	};
 	float lr = 0.1f;
-	PERCEPTRON::n epochs = 100000;
-
-	for (PERCEPTRON::n s = 0; s < 4; ++s)
-	{
-		std::cout << "---\nInput: " << data[0][s][0] << " : " << data[0][s][1] << '\n';
-		net.forward(data[0][s], sigmoid);
-		std::cout << "Output: " << net.out()[0] << '\n';
-	}
+	PERCEPTRON::n epochs = 10000;
 
 	net.enableTraining();
 	net.train(data[0], data[1], sigmoid, sigmoidDV, lr, epochs);
