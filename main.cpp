@@ -18,7 +18,32 @@ void sigmoidDV(float& x) { x *= (1 - x); }
 
 int main()
 {
-	MLP::MLP net({ 2, 3, 1 });
+	// MLP::MLP net({ 2, 3, 1 });
+	// omp_set_num_threads(1);
+	// 
+	// std::vector<std::vector<std::vector<float>>> data =
+	// {
+	// 	{ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
+	// 	{ { 0 }, { 1 }, { 1 }, { 0 }}
+	// };
+	// float lr = 0.1f;
+	// PERCEPTRON::n epochs = 50000;
+	// 
+	// net.enableTraining();
+	// net.train(data[0], data[1], sigmoid, sigmoidDV, lr, epochs);
+	// net.disableTraining();
+	// 
+	// for (PERCEPTRON::n s = 0; s < 4; ++s)
+	// {
+	// 	std::cout << "---\nInput: " << data[0][s][0] << " : " << data[0][s][1] << '\n';
+	// 	net.forward(data[0][s], sigmoid);
+	// 	std::cout << "Output: " << net.out()[0] << '\n';
+	// }
+	// 
+	// if (!net.save("XORNet.MLP")) std::cout << "Failed";
+
+	MLP::MLP net;
+	if (!net.load("XORNet.MLP")) std::cout << "Failed to load. Will props crash.\n";
 	omp_set_num_threads(1);
 
 	std::vector<std::vector<std::vector<float>>> data =
@@ -26,12 +51,6 @@ int main()
 		{ { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } },
 		{ { 0 }, { 1 }, { 1 }, { 0 }}
 	};
-	float lr = 0.1f;
-	PERCEPTRON::n epochs = 10000;
-
-	net.enableTraining();
-	net.train(data[0], data[1], sigmoid, sigmoidDV, lr, epochs);
-	net.disableTraining();
 
 	for (PERCEPTRON::n s = 0; s < 4; ++s)
 	{
