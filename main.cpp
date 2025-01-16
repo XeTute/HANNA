@@ -12,10 +12,6 @@ void ReLUDV(float& x) { x = (x > 0) ? 1.f : x; }
 void sigmoid(float& x) { x = 1.f / (1.f + std::exp(-x)); }
 void sigmoidDV(float& x) { x *= (1 - x); }
 
-/*
-  Current Problem: Output always ~0.49999 for all inputs after training
-*/
-
 int main()
 {
 	// MLP::MLP net({ 2, 3, 1 });
