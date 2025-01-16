@@ -122,6 +122,8 @@ namespace PERCEPTRON
 		const std::vector<float>& gradDesc(const std::vector<float>& last_input, const std::vector<float>& expected_output, void (*activationDV) (float&), const float& lr)
 		{
 #pragma omp parallel for
+			for (n neuron = 0; neuron < i; ++neuron) expected_input[neuron] = 0.f;
+#pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 			{
 				float tmpval = val[neuron];
