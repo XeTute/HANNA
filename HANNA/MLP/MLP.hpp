@@ -43,6 +43,14 @@ namespace MLP
 			alloc();
 		}
 
+		n getNParams()
+		{
+			n params = 0;
+			for (n layer = 1; layer < l; ++layer)
+				params += ls[layer] * ls[layer - 1] + ls[layer];
+			return params;
+		}
+
 		void enableTraining()
 		{
 			for (n layer = 0; layer < dl; ++layer)
