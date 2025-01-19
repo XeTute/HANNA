@@ -4,6 +4,7 @@
 #include <fstream>
 #include <omp.h>
 #include <random>
+#include <thread>
 #include <vector>
 
 namespace PERCEPTRON
@@ -25,8 +26,9 @@ namespace PERCEPTRON
 			val.resize(o);
 			bias.resize(o);
 			weight.resize(o);
-			for (std::vector<float>& vec : weight)
-				vec.resize(i);
+#pragma omp parallel for
+			for (n neuron = 0; neuron < o; ++neuron)
+				weight[neuron].resize(i);
 			return true;
 		}
 
@@ -44,15 +46,8 @@ namespace PERCEPTRON
 		LAYER() : i(0), o(0), val(0), bias(0), expected_input(0), weight(0) {}
 		LAYER(n input, n output) { birth(input, output); }
 
-		void enableTraining()
-		{
-			expected_input.resize(i);
-		}
-
-		void disableTraining()
-		{
-			expected_input.resize(0);
-		}
+		void enableTraining() { expected_input.resize(i); }
+		void disableTraining() { expected_input.resize(0); }
 
 		bool birth(n input, n output)
 		{
@@ -67,6 +62,7 @@ namespace PERCEPTRON
 			i = 0, o = 0;
 			val.resize(0);
 			bias.resize(0);
+#pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 				weight[o].resize(0);
 		}
@@ -121,8 +117,7 @@ namespace PERCEPTRON
 
 		const std::vector<float>& gradDesc(const std::vector<float>& last_input, const std::vector<float>& expected_output, void (*activationDV) (float&), const float& lr)
 		{
-#pragma omp parallel for
-			for (n neuron = 0; neuron < i; ++neuron) expected_input[neuron] = 0.f;
+			std::fill(expected_input.begin(), expected_input.end(), 0.f);
 #pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 			{
