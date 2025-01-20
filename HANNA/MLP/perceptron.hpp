@@ -6,6 +6,8 @@
 #include <random>
 #include <thread>
 #include <vector>
+// #include <valarray>
+// #include <immintrin.h>
 
 namespace PERCEPTRON
 {
