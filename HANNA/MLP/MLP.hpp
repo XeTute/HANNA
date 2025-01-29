@@ -16,7 +16,7 @@ namespace MLP
 		using n = PERCEPTRON::n;
 
 		std::vector<PERCEPTRON::LAYER> perc;
-		std::vector<float> last_input;
+		std::valarray<float> last_input;
 		std::vector<n> ls; // layer scale
 		n l, dl, ddl, dddl;
 
@@ -65,27 +65,27 @@ namespace MLP
 			last_input.resize(0);
 		}
 
-		const void forward(const std::vector<float>& inp, void (*activation) (float&))
+		const void forward(const std::valarray<float>& inp, void (*activation) (float&))
 		{
 			perc[0].forward(inp, activation);
 			for (n layer = 1; layer < dl; ++layer)
 				perc[layer].forward(perc[layer - 1].getCS(), activation);
 		}
 
-		void forwardForGrad(const std::vector<float>& inp, void (*activation) (float&))
+		void forwardForGrad(const std::valarray<float>& inp, void (*activation) (float&))
 		{
 			last_input = inp;
 			forward(inp, activation);
 		}
 
-		const std::vector<float>& out() { return perc[ddl].getCS(); }
-		const std::vector<float>& out(const std::vector<float>& inp, void (*activation) (float&))
+		const std::valarray<float>& out() { return perc[ddl].getCS(); }
+		const std::valarray<float>& out(const std::valarray<float>& inp, void (*activation) (float&))
 		{
 			forward(inp, activation);
 			return out();
 		}
 
-		void gradDesc(const std::vector<float>& expected_output, void (*activationDV) (float&), const float& lr)
+		void gradDesc(const std::valarray<float>& expected_output, void (*activationDV) (float&), const float& lr)
 		{
 			perc[ddl].gradDesc(perc[dddl].getCS(), expected_output, activationDV, lr);
 			for (n layer = dddl; layer > 0; --layer)
@@ -93,10 +93,20 @@ namespace MLP
 			perc[0].gradDesc(last_input, perc[1].lei(), activationDV, lr);
 		}
 
-		void train(const std::vector<std::vector<float>>& input, const std::vector<std::vector<float>>& output, void (*activation) (float&), void (*activationDV) (float&), const float& lr, const n& epochs)
+		void train
+		(
+			const std::vector<std::valarray<float>>& input,
+			const std::vector<std::valarray<float>>& output,
+			void (*activation) (float&),
+			void (*activationDV) (float&),
+			float lr,
+			float multby,
+			const n& epochs
+		)
 		{
 			if (input.size() != output.size()) std::cerr << "[HANNA-MLP : MLP::MLP::train([...])]: Input Samples don't match Output Samples. Will train on min samples.\n";
 			n samples = std::min(input.size(), output.size());
+			enableTraining();
 			for (n e = 0; e < epochs; ++e)
 			{
 				for (n s = 0; s < samples; ++s)
@@ -104,7 +114,9 @@ namespace MLP
 					forwardForGrad(input[s], activation);
 					gradDesc(output[s], activationDV, lr);
 				}
+				lr *= multby;
 			}
+			disableTraining();
 		}
 
 		bool save(PERCEPTRON::str path)

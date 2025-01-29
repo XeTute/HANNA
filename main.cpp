@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <sstream>
 #include <chrono>
 #include <cmath>
@@ -9,10 +9,13 @@ void sigmoid(float& x) { x = 1.f / (1.f + std::exp(-x)); }
 void sigmoidDV(float& x) { x *= (1.f - x); }
 
 struct normConf { float min, delta; }; // delta = max - min
-void minmaxnorm(std::vector<float>& a, normConf conf)
+void minmaxnorm(std::valarray<float>& a, normConf conf)
 {
-	if (a.empty()) return;
-	if (conf.min == *std::max_element(a.begin(), a.end())) std::fill(a.begin(), a.end(), 0.f);
+	if (conf.min == *std::max_element(&a[0], &a[a.size() - 1]))
+	{
+		a = 0.f;
+		return;
+	}
 
 	long long int size = a.size();
 #pragma omp parallel for
@@ -20,12 +23,12 @@ void minmaxnorm(std::vector<float>& a, normConf conf)
 		a[i] = (a[i] - conf.min) / conf.delta;
 }
 
-std::vector<std::vector<float>> readCSV(std::string path)
+std::vector<std::valarray<float>> readCSV(std::string path)
 {
 	std::ifstream r(path, std::ios::in);
-	if (!r || !r.is_open() || !r.good()) return std::vector<std::vector<float>>(0);
+	if (!r || !r.is_open() || !r.good()) return std::vector<std::valarray<float>>(0);
 
-	std::vector<std::vector<float>> data(0);
+	std::vector<std::valarray<float>> data(0);
 	std::size_t elems = 0;
 
 	std::string buffer("");
@@ -37,12 +40,14 @@ std::vector<std::vector<float>> readCSV(std::string path)
 		while (std::getline(header, elem, ','))
 			++elems;
 	}
+	--elems; // first is 'id'
 
 	while (std::getline(r, buffer))
 	{
 		std::stringstream row(buffer);
-		std::vector<float> rowvec(elems);
+		std::valarray<float> rowvec(elems);
 		
+		std::getline(row, elem, ','); // First elem is 'id'
 		for (std::size_t i = 0; std::getline(row, elem, ','); ++i)
 			rowvec[i] = std::stof(elem);
 		data.push_back(rowvec);
@@ -54,62 +59,79 @@ int main()
 {
 	omp_set_num_threads(6);
 
-	MLP::MLP hdm; // heart disease model
-	hdm.birth({ 12, 7, 7, 3, 1 });
+	std::chrono::high_resolution_clock::time_point tp[2] = { std::chrono::high_resolution_clock::now() };
 
-	auto data = readCSV("cardio-hdd.csv");
-
+	std::vector<std::valarray<float>> data = readCSV("cardio-hdd.csv");
 	std::size_t rows = data.size();
 	std::size_t cols = data[0].size();
-	std::size_t inputs = cols - 1;
 
-	std::vector<std::vector<float>> input(rows, std::vector<float>(inputs));
-	std::vector<std::vector<float>> output(rows, std::vector<float>(1));
+	std::vector<std::valarray<float>> input (rows, std::valarray<float>(cols - 1));
+	std::vector<std::valarray<float>> output(rows, std::valarray<float>(1));
 
-	std::vector<normConf> conf(inputs, { 0.f, 0.f });
+	// Age, Gender, Height, Weight, ap_hi, ap_lo, cholesterol, gluc, smoke, alco, active, cardio
+	std::vector<bool> normalizecol({ true, false, true, true, true, true, true, true, false, false, false, false });
 
-	for (std::size_t col = 0; col < inputs; ++col)
+	// Col1: Gender. Nobody knows why it's 1 = Male and 2 = Female instead of 0 and 1
+	for (std::size_t row = 0; row < rows; ++row)
+		--data[row][1];
+
+	for (std::size_t col = 0; col < cols; ++col)
 	{
-		std::vector<float> coldata(rows);
-#pragma omp parallel for
-		for (long long int row = 0; row < rows; ++row)
-			coldata[row] = data[row][col];
+		if (normalizecol[col])
+		{
+			std::valarray<float> coldata;
+			coldata.resize(rows);
+			for (std::size_t row = 0; row < rows; ++row)
+				coldata[row] = data[row][col];
+			
+			float min = *std::min_element(&(coldata[0]), &(coldata[rows - 1]));
+			normConf conf = { min, *std::max_element(&(coldata[0]), &(coldata[rows - 1])) - min };
+			minmaxnorm(coldata, conf);
 
-		float min = *std::min_element(coldata.begin(), coldata.end());
-		conf[col] = { min, *std::max_element(coldata.begin(), coldata.end()) - min };
-		minmaxnorm(coldata, conf[col]);
-
-#pragma omp parallel for
-		for (long long int row = 0; row < rows; ++row)
-			data[row][col] = coldata[row];
+			for (std::size_t row = 0; row < rows; ++row)
+				data[row][col] = coldata[row];
+		}
 	}
-	std::cout << "Normalized data.\n";
 
+	std::size_t inputsize = input[0].size();
 	for (std::size_t row = 0; row < rows; ++row)
 	{
-		for (std::size_t col = 0; col < inputs; ++col)
+		for (std::size_t col = 0; col < inputsize; ++col)
 			input[row][col] = data[row][col];
-		output[row][0] = data[row][inputs];
+		output[row][0] = data[row][inputsize];
 	}
-
 	data.clear();
-	std::cout << "Formatted data.\n";
 
-	float lr = 0.05f;
-	std::size_t epochs = 100;
-	std::chrono::high_resolution_clock::time_point tp[2];
-
-	hdm.enableTraining();
-	tp[0] = std::chrono::high_resolution_clock::now();
-	hdm.train(input, output, sigmoid, sigmoidDV, lr, epochs);
 	tp[1] = std::chrono::high_resolution_clock::now();
-	hdm.disableTraining();
+	std::cout << "Red, initialized and formatted dataset in " << std::chrono::duration_cast<std::chrono::milliseconds>(tp[1] - tp[0]).count() << "ms.\n";
+	
+	for (unsigned short col = 0; col < inputsize; ++col)
+		std::cout << input[64][col] << " : ";
+	std::cout << output[64][0] << '\n';
 
-	std::cout << "Took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "s.\n";
+	long long int is = long long int(inputsize);
+	MLP::MLP hdm({ is, is, 1 });
 
+	std::size_t epochs = 200;
+
+	tp[0] = std::chrono::high_resolution_clock::now();
+	hdm.train(input, output, sigmoid, sigmoidDV, 0.1f, 0.9f, epochs);
+	tp[1] = std::chrono::high_resolution_clock::now();
+
+	std::cout << "Took " << std::chrono::duration_cast<std::chrono::seconds>(tp[1] - tp[0]).count() << "s +- 500ms.\n";
 	hdm.save("HDM.MLP");
-	hdm.forward(input[0], sigmoid);
-	std::cout << "Output: " << hdm.out()[0] << '.' << std::endl;
+	std::cout << "--- Lazy Test ---\n";
+
+	unsigned short testspassed = 0;
+	for (unsigned short i = 0; i < 100; ++i)
+	{
+		float out;
+		if (hdm.out(input[i], sigmoid)[0] >= 0.5) out = 1.f;
+		else out = 0.f;
+		if (out == output[i][0]) ++testspassed;
+		std::cout << hdm.out()[0] << '\n';
+	}
+	std::cout << "Passed " << testspassed << " out of 100 tests." << std::endl;
 
 	return 0;
 }

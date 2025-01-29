@@ -4,10 +4,8 @@
 #include <fstream>
 #include <omp.h>
 #include <random>
-#include <thread>
 #include <vector>
-// #include <valarray>
-// #include <immintrin.h>
+#include <valarray>
 
 namespace PERCEPTRON
 {
@@ -19,9 +17,9 @@ namespace PERCEPTRON
 	private:
 		n i, o; // input output, input = neurons last layer, output = neurons this layer
 
-		std::vector<float> val, bias;
-		std::vector<float> expected_input;
-		std::vector<std::vector<float>> weight; // Connecting the last and `this` layer.
+		std::valarray<float> val, bias;
+		std::valarray<float> expected_input;
+		std::vector<std::valarray<float>> weight; // Connecting the last and `this` layer.
 
 		bool alloc()
 		{
@@ -40,7 +38,7 @@ namespace PERCEPTRON
 			std::uniform_real_distribution<float> dist(-1.f, 1.f);
 
 			for (float& x : bias) x = dist(gen);
-			for (std::vector<float>& vec : weight)
+			for (std::valarray<float>& vec : weight)
 				for (float& x : vec) x = dist(gen);
 		}
 
@@ -78,9 +76,9 @@ namespace PERCEPTRON
 			if (!w.is_open() || !w) return false;
 			if (!w.write((const char*)&i, sn)) return false;
 			if (!w.write((const char*)&o, sn)) return false;
-			for (std::vector<float>& vec : weight)
-				if (!w.write((const char*)vec.data(), sf * i)) return false;
-			if (!w.write((const char*)bias.data(), sf * o)) return false;
+			for (std::valarray<float>& vec : weight)
+				if (!w.write((const char*)&vec[0], sf * i)) return false;
+			if (!w.write((const char*)&bias[0], sf * o)) return false;
 
 			return true;
 		}
@@ -96,14 +94,14 @@ namespace PERCEPTRON
 			if (!r.read((char*)&o, sn)) return false;
 
 			alloc();
-			for (std::vector<float>& vec : weight)
-				if (!r.read((char*)vec.data(), sf * i)) return false;
-			if (!r.read((char*)bias.data(), sf * o)) return false;
+			for (std::valarray<float>& vec : weight)
+				if (!r.read((char*)&vec[0], sf * i)) return false;
+			if (!r.read((char*)&bias[0], sf * o)) return false;
 
 			return true;
 		}
 
-		void forward(const std::vector<float>& input, void (*activation) (float&))
+		void forward(const std::valarray<float>& input, void (*activation) (float&))
 		{
 #pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
@@ -115,11 +113,11 @@ namespace PERCEPTRON
 				val[neuron] = tmpval;
 			}
 		}
-		const std::vector<float>& getCS() { return val; } // CS current state
+		const std::valarray<float>& getCS() { return val; } // CS current state
 
-		const std::vector<float>& gradDesc(const std::vector<float>& last_input, const std::vector<float>& expected_output, void (*activationDV) (float&), const float& lr)
+		void gradDesc(const std::valarray<float>& last_input, const std::valarray<float>& expected_output, void (*activationDV) (float&), const float& lr)
 		{
-			std::fill(expected_input.begin(), expected_input.end(), 0.f);
+			expected_input = 0.f;
 #pragma omp parallel for
 			for (n neuron = 0; neuron < o; ++neuron)
 			{
@@ -137,10 +135,8 @@ namespace PERCEPTRON
 					expected_input[nll] += delta * weight[neuron][nll];
 				}
 			}
-
-			return expected_input;
 		}
-		const std::vector<float>& lei() { return expected_input; } // last expected input
+		const std::valarray<float>& lei() { return expected_input; } // last expected input
 
 		~LAYER() { suicide(); }
 	};
