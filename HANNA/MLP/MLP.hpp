@@ -1,165 +1,248 @@
+#include <fstream>
+#include <string>
+#include <thread>
+#include <valarray>
+#include <vector>
+#include <random>
+#include <cmath>
+#include <cstdint>
+
 #ifndef MLP_HPP
 #define MLP_HPP
 
-#include <cmath>
-#include <iostream>
-#include <cstring>
-#include <string>
-#include <filesystem>
-#include "perceptron.hpp"
-
 namespace MLP
 {
+	using n = std::size_t;
+	using vec = std::valarray<float>;
+	using scales = std::vector<n>;
+
 	class MLP
 	{
 	private:
-		using n = PERCEPTRON::n;
 
-		std::vector<PERCEPTRON::LAYER> perc;
-		std::valarray<float> last_input;
-		std::vector<n> ls; // layer scale
-		n l, dl, ddl, dddl;
+		// Parameters
+		std::vector<vec> bias;
+		std::vector<vec> neur;
+		std::vector<vec> delta;
+		std::vector<std::vector<vec>> weight;
 
-		void alloc()
+		// Metadata
+		scales nn; // number neurons
+		n i;
+		n l; // layer, layer = nn.size(), but std::vector::size() calculates each time, so consider this caching
+		n dl; // decreased layer
+		n ddl;
+
+		void alloc() // after nn, l, dl, ddl, i is already init
 		{
-			perc.resize(dl);
-			for (n layer = 0; layer < dl; ++layer)
-				perc[layer].birth(ls[layer], ls[layer + 1]);
+			bias.resize(dl);
+			neur.resize(dl);
+			weight.resize(dl);
+
+			bias[0].resize(nn[0]);
+			neur[0].resize(nn[0]);
+			weight[0] = std::vector<vec>(nn[0], vec(i));
+
+			for (n _l = 1; _l < dl; ++_l)
+			{
+				n nrns = nn[_l];
+				bias[_l].resize(nrns);
+				neur[_l].resize(nrns);
+				weight[_l] = std::vector<vec>(nrns, vec(nn[_l - 1]));
+			}
+			rand();
 		}
 
 	public:
-		MLP() : perc(0), ls(0), l(0), dl(0), ddl(0), dddl(0) {}
-		MLP(std::vector<n> _scale) { birth(_scale); }
 
-		void birth(std::vector<n> _scale)
+		float lr;
+
+		MLP(): bias(0), neur(0), delta(0), weight(0), nn(0), i(0), l(0), dl(0), ddl(0), lr(0.f) {}
+		MLP(scales scale) { birth(scale); }
+
+		void birth(scales scale)
 		{
-			ls = _scale;
+			nn = scale;
+			nn.erase(nn.begin());
 
-			l = ls.size();
+			i = scale[0];
+			l = scale.size();
 			dl = l - 1;
 			ddl = dl - 1;
-			dddl = ddl - 1;
 
 			alloc();
 		}
 
-		n getNParams()
+		void suicide()
 		{
-			n params = 0;
-			for (n layer = 1; layer < l; ++layer)
-				params += ls[layer] * ls[layer - 1] + ls[layer];
-			return params;
+			bias.resize(0);
+			neur.resize(0);
+			weight.resize(0);
+			nn.resize(0);
+			l = 0;
+			dl = 0;
+			ddl = 0;
+		}
+
+		void rand() // xavier
+		{
+			std::mt19937 gen(std::random_device{}());
+			for (std::size_t _l = 0; _l < dl; ++_l)
+			{
+				float range = std::sqrt(6.f / nn[_l] + (_l > 0 ? nn[_l - 1] : i));
+				std::uniform_real_distribution<float> dist(-range, range);
+
+				for (float& x : bias[_l]) x = dist(gen);
+				for (vec& nrn : weight[_l])
+					for (float& x : nrn) x = dist(gen);
+			}
+		}
+
+		bool save(std::string path)
+		{
+			std::ofstream w(path, std::ios::out | std::ios::binary);
+			if (!w || !w.good()) return false;
+
+			if (!w.write((const char*)&l, sizeof(l))) return false;
+			if (!w.write((const char*)&i, sizeof(i))) return false;
+			if (!w.write((const char*)nn.data(), sizeof(nn[0]) * l)) return false;
+			
+			for (std::size_t _l = 0; _l < dl; ++_l)
+			{
+				if (!w.write((const char*)&bias[_l][0], sizeof(bias[0][0]) * bias[_l].size())) return false;
+				std::size_t nrns = nn[_l];
+				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+					if (!w.write((const char*)&weight[_l][nrn][0], sizeof(weight[0][0][0]) * weight[_l][nrn].size()))
+						return false;
+			}
+
+			return true;
+		}
+
+		bool load(std::string path)
+		{
+			std::ifstream r(path, std::ios::in | std::ios::binary);
+			if (!r || !r.good()) return false;
+
+			if (!r.read((char*)&l, sizeof(l))) return false;
+			dl = l - 1;
+			ddl = dl - 1;
+			nn.resize(dl);
+
+			if (!r.read((char*)&i, sizeof(i))) return false;
+			if (!r.read((char*)nn.data(), sizeof(nn[0]) * l)) return false;
+			alloc();
+
+			for (std::size_t _l = 0; _l < dl; ++_l)
+			{
+				if (!r.read((char*)&bias[_l][0], sizeof(bias[0][0]) * bias[_l].size())) return false;
+				std::size_t nrns = nn[_l];
+				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+					if (!r.read((char*)&weight[_l][nrn][0], sizeof(weight[0][0][0]) * weight[_l][nrn].size()))
+						return false;
+			}
+
+			return true;
 		}
 
 		void enableTraining()
 		{
-			for (n layer = 0; layer < dl; ++layer)
-				perc[layer].enableTraining();
-			last_input.resize(ls[0]);
+			delta.resize(dl);
+			for (std::size_t _l = 0; _l < dl; ++_l)
+				delta[_l].resize(nn[_l]);
 		}
 
 		void disableTraining()
 		{
-			for (n layer = 0; layer < dl; ++layer)
-				perc[layer].disableTraining();
-			last_input.resize(0);
+			for (std::size_t _l = 0; _l < dl; ++_l)
+				delta[_l].resize(0);
+			delta.resize(0);
 		}
 
-		const void forward(const std::valarray<float>& inp, void (*activation) (float&))
+		void forward(const vec& input, float (*activation) (const float&))
 		{
-			perc[0].forward(inp, activation);
-			for (n layer = 1; layer < dl; ++layer)
-				perc[layer].forward(perc[layer - 1].getCS(), activation);
-		}
+			std::size_t nrns = nn[0];
+			for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+			{
+				neur[0][nrn] = (weight[0][nrn] * input).sum() + bias[0][nrn];
+				neur[0][nrn] = activation(neur[0][nrn]);
+			}
 
-		void forwardForGrad(const std::valarray<float>& inp, void (*activation) (float&))
-		{
-			last_input = inp;
-			forward(inp, activation);
+			for (std::size_t _l = 1; _l < dl; ++_l)
+			{
+				nrns = nn[_l];
+				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+				{
+					neur[_l][nrn] = (weight[_l][nrn] * neur[_l - 1]).sum() + bias[_l][nrn];
+					neur[_l][nrn] = activation(neur[_l][nrn]);
+				}
+			}
 		}
+		const vec& out() { return neur[ddl]; }
+		const vec& out(const vec& input, float (*activation) (const float&)) { forward(input, activation); return out(); }
 
-		const std::valarray<float>& out() { return perc[ddl].getCS(); }
-		const std::valarray<float>& out(const std::valarray<float>& inp, void (*activation) (float&))
+		void gradDesc(const vec& last_input, const vec& output, float (*activationDV) (const float&))
 		{
-			forward(inp, activation);
-			return out();
-		}
+			delta[ddl] = (neur[ddl] - output) * (neur[ddl]).apply(activationDV);
+			std::size_t nrns;
 
-		void gradDesc(const std::valarray<float>& expected_output, void (*activationDV) (float&), const float& lr)
-		{
-			perc[ddl].gradDesc(perc[dddl].getCS(), expected_output, activationDV, lr);
-			for (n layer = dddl; layer > 0; --layer)
-				perc[layer].gradDesc(perc[layer - 1].getCS(), perc[layer + 1].lei(), activationDV, lr);
-			perc[0].gradDesc(last_input, perc[1].lei(), activationDV, lr);
+			// Calculate errors & cache them in delta
+			for (std::intmax_t _l = ddl - 1; _l >= 0; --_l) // signed for this one number underflow =(
+			{
+				std::size_t il = _l + 1; // il increased layer
+				nrns = nn[_l];
+				std::size_t nxt_nrns = nn[il];
+
+				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+				{
+					float e = 0.f;
+					for (std::size_t nxt_nrn = 0; nxt_nrn < nxt_nrns; ++nxt_nrn)
+						e += weight[il][nxt_nrn][nrn] * delta[il][nxt_nrn];
+					delta[_l][nrn] = e * activationDV(neur[_l][nrn]);
+				}
+			}
+
+			// Actually apply these calculated values
+			nrns = nn[0];
+			for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+			{
+				const float deltalr = lr * delta[0][nrn];
+				bias[0][nrn] -= deltalr;
+				weight[0][nrn] -= deltalr * last_input;
+			}
+
+			for (std::size_t _l = 1; _l < dl; ++_l)
+			{
+				nrns = nn[_l];
+				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
+				{
+					const float deltalr = lr * delta[_l][nrn];
+					bias[_l][nrn] -= deltalr;
+					weight[_l][nrn] -= deltalr * neur[_l - 1];
+				}
+			}
 		}
 
 		void train
 		(
-			const std::vector<std::valarray<float>>& input,
-			const std::vector<std::valarray<float>>& output,
-			void (*activation) (float&),
-			void (*activationDV) (float&),
-			float lr,
-			float multby,
-			const n& epochs
+			const std::vector<vec>& input, const std::vector<vec>& output,
+			float (*activation) (const float&), float (*activationDV) (const float&),
+			std::size_t epochs
 		)
 		{
-			if (input.size() != output.size()) std::cerr << "[HANNA-MLP : MLP::MLP::train([...])]: Input Samples don't match Output Samples. Will train on min samples.\n";
-			n samples = std::min(input.size(), output.size());
-			enableTraining();
-			for (n e = 0; e < epochs; ++e)
+			std::size_t samples = std::min(input.size(), output.size());
+			for (std::size_t e = 0; e < epochs; ++e)
 			{
-				for (n s = 0; s < samples; ++s)
+				for (std::size_t s = 0; s < samples; ++s)
 				{
-					forwardForGrad(input[s], activation);
-					gradDesc(output[s], activationDV, lr);
+					forward(input[s], activation);
+					gradDesc(input[s], output[s], activationDV);
 				}
-				lr *= multby;
 			}
-			disableTraining();
 		}
 
-		bool save(PERCEPTRON::str path)
-		{
-			std::filesystem::create_directory(path);
-			std::ofstream w(std::string(path) + std::string("/DNA.MLP"), std::ios::out | std::ios::binary);
-			if (!w || !w.is_open()) return false;
-
-			if ( !w.write((const char*)&l, sizeof(l)) ) return false;
-			if ( !w.write((const char*)ls.data(), sizeof(ls[0]) * ls.size()) ) return false;
-			w.close();
-
-			std::string tmppath = std::string(path) + std::string("/LAYER");
-			for (n layer = 0; layer < dl; ++layer)
-				if ( !perc[layer].save((tmppath + std::to_string(layer) + std::string(".MLP")).c_str()) ) return false;
-			return true;
-		}
-
-		bool load(PERCEPTRON::str path)
-		{
-			std::ifstream r(std::string(path) + std::string("/DNA.MLP"), std::ios::in | std::ios::binary);
-			if (!r || !r.is_open()) return false;
-
-			if ( !r.read((char*)&l, sizeof(l)) ) return false;
-			ls.resize(l);
-			dl = l - 1;
-			ddl = dl - 1;
-			dddl = ddl - 1;
-			if ( !r.read((char*)ls.data(), sizeof(ls[0]) * ls.size()) ) return false;
-			alloc();
-
-			std::string tmppath = std::string(path) + std::string("/LAYER");
-			for (n layer = 0; layer < dl; ++layer)
-				if ( !perc[layer].load((tmppath + std::to_string(layer) + std::string(".MLP")).c_str()) ) return false;
-			return true;
-		}
-
-		~MLP()
-		{
-			perc.resize(0);
-			ls.resize(0);
-			l = 0, dl = 0, ddl = 0, dddl = 0;
-		}
+		~MLP() { suicide(); }
 	};
 }
+
 #endif
