@@ -1,11 +1,11 @@
+#include <cmath>
+#include <cstdint>
 #include <fstream>
+#include <random>
 #include <string>
 #include <thread>
 #include <valarray>
 #include <vector>
-#include <random>
-#include <cmath>
-#include <cstdint>
 
 #ifndef MLP_HPP
 #define MLP_HPP
@@ -13,8 +13,8 @@
 namespace MLP
 {
 	using n = std::size_t;
-	using vec = std::valarray<float>;
 	using scales = std::vector<n>;
+	using vec = std::valarray<float>;
 
 	class MLP
 	{
@@ -183,8 +183,10 @@ namespace MLP
 
 		void gradDesc(const vec& last_input, const vec& output, float (*activationDV) (const float&))
 		{
-			delta[ddl] = (neur[ddl] - output) * (neur[ddl]).apply(activationDV);
-			std::size_t nrns;
+			std::size_t nrns = nn[ddl];
+			float cache;
+
+			delta[ddl] = (neur[ddl] - output) * neur[ddl].apply(activationDV);
 
 			// Calculate errors & cache them in delta
 			for (std::intmax_t _l = ddl - 1; _l >= 0; --_l) // signed for this one number underflow =(
@@ -195,10 +197,10 @@ namespace MLP
 
 				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
 				{
-					float e = 0.f;
+					float cache = 0.f;
 					for (std::size_t nxt_nrn = 0; nxt_nrn < nxt_nrns; ++nxt_nrn)
-						e += weight[il][nxt_nrn][nrn] * delta[il][nxt_nrn];
-					delta[_l][nrn] = e * activationDV(neur[_l][nrn]);
+						cache += weight[il][nxt_nrn][nrn] * delta[il][nxt_nrn];
+					delta[_l][nrn] = cache * activationDV(neur[_l][nrn]);
 				}
 			}
 
@@ -206,9 +208,9 @@ namespace MLP
 			nrns = nn[0];
 			for (std::size_t nrn = 0; nrn < nrns; ++nrn)
 			{
-				const float deltalr = lr * delta[0][nrn];
-				bias[0][nrn] -= deltalr;
-				weight[0][nrn] -= deltalr * last_input;
+				cache = lr * delta[0][nrn];
+				bias[0][nrn] -= cache;
+				weight[0][nrn] -= cache * last_input;
 			}
 
 			for (std::size_t _l = 1; _l < dl; ++_l)
@@ -216,9 +218,9 @@ namespace MLP
 				nrns = nn[_l];
 				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
 				{
-					const float deltalr = lr * delta[_l][nrn];
-					bias[_l][nrn] -= deltalr;
-					weight[_l][nrn] -= deltalr * neur[_l - 1];
+					cache = lr * delta[_l][nrn];
+					bias[_l][nrn] -= cache;
+					weight[_l][nrn] -= cache * neur[_l - 1];
 				}
 			}
 		}
