@@ -30,8 +30,7 @@ namespace MLP
 		scales nn; // number neurons
 		n i;
 		n l; // layer, layer = nn.size(), but std::vector::size() calculates each time, so consider this caching
-		n dl; // decreased layer
-		n ddl;
+		n dl, ddl, dddl;
 
 		void alloc() // after nn, l, dl, ddl, i is already init
 		{
@@ -69,6 +68,7 @@ namespace MLP
 			l = scale.size();
 			dl = l - 1;
 			ddl = dl - 1;
+			dddl = ddl - 1;
 
 			alloc();
 		}
@@ -82,6 +82,7 @@ namespace MLP
 			l = 0;
 			dl = 0;
 			ddl = 0;
+			dddl = 0;
 		}
 
 		void rand() // xavier
@@ -184,12 +185,11 @@ namespace MLP
 		void gradDesc(const vec& last_input, const vec& output, float (*activationDV) (const float&))
 		{
 			std::size_t nrns = nn[ddl];
-			float cache;
 
 			delta[ddl] = (neur[ddl] - output) * neur[ddl].apply(activationDV);
 
 			// Calculate errors & cache them in delta
-			for (std::intmax_t _l = ddl - 1; _l >= 0; --_l) // signed for this one number underflow =(
+			for (std::intmax_t _l = dddl; _l >= 0; --_l) // signed for this one number underflow =(
 			{
 				std::size_t il = _l + 1; // il increased layer
 				nrns = nn[_l];
@@ -208,9 +208,9 @@ namespace MLP
 			nrns = nn[0];
 			for (std::size_t nrn = 0; nrn < nrns; ++nrn)
 			{
-				cache = lr * delta[0][nrn];
-				bias[0][nrn] -= cache;
-				weight[0][nrn] -= cache * last_input;
+				float deltalr = lr * delta[0][nrn];
+				bias[0][nrn] -= deltalr;
+				weight[0][nrn] -= deltalr * last_input;
 			}
 
 			for (std::size_t _l = 1; _l < dl; ++_l)
@@ -218,9 +218,10 @@ namespace MLP
 				nrns = nn[_l];
 				for (std::size_t nrn = 0; nrn < nrns; ++nrn)
 				{
-					cache = lr * delta[_l][nrn];
-					bias[_l][nrn] -= cache;
-					weight[_l][nrn] -= cache * neur[_l - 1];
+					float deltalr;
+					deltalr = lr * delta[_l][nrn];
+					bias[_l][nrn] -= deltalr;
+					weight[_l][nrn] -= deltalr * neur[_l - 1];
 				}
 			}
 		}
