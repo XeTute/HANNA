@@ -1,15 +1,18 @@
-# 你好，朋友 | ہیلو، دوست  
+# Hello, Friend | ہیلو، دوست | 朋友你好
 
-## 🇨🇳 | MANDARIN (中文)
+## What's HANNA
+HANNA, short for Hamzah's Artificial Neural Network Architecture, is a headers-only, native C++ library designed for easily inferencing and training HANNA and MLP models.  
+
 > [!IMPORTANT]
-> HANNA 仍是新产品，可能包含我们在测试时未遇到的小错误或编译器特定错误。如果您遇到这些问题，请及时报告，我们将确保在几周内打上补丁。
+> HANNA is still in active development. Please do not currently consider it for production enviroments. See reasons below.
 
-HANNA 是一个仅有头文件、无依赖性（OMP 除外）的库，目前仅实现了 MLP（多层感知器）。  
-HANNA 已针对私人使用进行了优化，但我们 XeTute Technologies 仍在进行一些重大改进，例如通过 <immintrin.h> 使用 SIMD（单指令多数据），以及使用 <valarray> 代替 <vector> 等更注重数学的标准库。  
+### What HANNA currently does implement:  
+- A simple MLP class with SIMD(Single-Instruction Multiple-Data) enabled throught std::valarray + -O3 / compiler optimisations  
+- A minimal DPP(Data Pre-Processing) namespace for currently (only) reading CSV files  
 
-## 🇵🇰 | URDU (اردو)
-> [!IMPORTANT]
-> HANNA ابھی بھی نئی ہے اور اس میں چھوٹے بگ یا کمپائلر سے مخصوص غلطیاں ہو سکتی ہیں جن کا ہمیں ٹیسٹنگ کے دوران سامنا نہیں ہوا۔ اگر آپ کو ان کا سامنا ہو تو براہ کرم ہمیں رپورٹ کریں، اور ہم انہیں چند ہفتوں کے اندر درست کرنے کو یقینی بنائیں گے۔
+### What we plan to implement / currently not implemented:
+- The actual HANNA architecture after extensively testing the MLP implementation
+- Multiple Threads being used when set to do so (both through std::thread in <thread> for CPUs and OpenCL for GPGPUs)
+- Normalisation functions in the DPP namespace
 
-HANNA ایک ہیڈرز-صرف، بغیر کسی انحصار (سوائے OMP کے) لائبریری ہے جو فی الحال صرف ایک MLP (ملٹی-لیئر-پرسیپٹرون) کو نافذ کرتی ہے۔
-HANNA نجی استعمال کے لیے بہتر بنائی گئی ہے، لیکن ہم، XeTute Technologies، ابھی بھی کچھ بڑے بہتریوں پر کام کر رہے ہیں، جیسے کہ <immintrin.h> کے ذریعے SIMD (سنگل-انسٹرکشن ملٹیپل-ڈیٹا) کا استعمال اور <vector> کے بجائے زیادہ ریاضی پر مرکوز معیاری لائبریریوں جیسے <valarray> کا استعمال۔
+Contributions are welcome.
