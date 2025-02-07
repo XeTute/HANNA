@@ -165,14 +165,15 @@ namespace MLP
 			n nrns = nn[0];
 
 			for (n nrn = 0; nrn < nrns; ++nrn)
-				neur[0][nrn] = (weight[0][nrn] * input).sum() + bias[0][nrn];
-			neur[0] = neur[0].apply(activation);
+				neur[0][nrn] = activation((weight[0][nrn] * input).sum() + bias[0][nrn]);
 
 			for (n _l = 1; _l < dl; ++_l)
 			{
+				n dl = _l - 1;
 				nrns = nn[_l];
+				
 				for (n nrn = 0; nrn < nrns; ++nrn)
-					neur[_l][nrn] = (weight[_l][nrn] * neur[_l - 1]).sum() + bias[_l][nrn];
+					neur[_l][nrn] = (weight[_l][nrn] * neur[dl]).sum() + bias[_l][nrn];
 				neur[_l] = neur[_l].apply(activation);
 			}
 		}
@@ -189,8 +190,8 @@ namespace MLP
 			for (std::intmax_t _l = dddl; _l >= 0; --_l) // signed for this one number underflow =(
 			{
 				n il = _l + 1; // il increased layer
-				nrns = nn[_l];
 				n nxt_nrns = nn[il];
+				nrns = nn[_l];
 
 				for (n nrn = 0; nrn < nrns; ++nrn)
 				{
