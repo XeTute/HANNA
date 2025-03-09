@@ -1,7 +1,5 @@
 #include <cstdint>
 #include <cmath>
-#include <iostream>
-#include <omp.h>
 #include <random>
 #include <vector>
 #include <Eigen/Eigen>
@@ -49,9 +47,7 @@ namespace MLP
 
 		void forward(const Eigen::VectorXf& input, float (*activation)(const float&))
 		{
-			neuron = bias;
-			for (un nrn = 0; nrn < nrns; ++nrn)
-				neuron(nrn) += input.dot(weight.row(nrn));
+			neuron = weight * input + bias;
 			neuron = neuron.unaryExpr(activation);
 		}
 
@@ -62,7 +58,7 @@ namespace MLP
 			return report();
 		}
 
-		void disnable_graddesc_ll() { deltall.resize(0); }
+		void disable_graddesc_ll() { deltall.resize(0); }
 
 		// ll last layer, comments are for my own understanding of gradient descent
 		void graddesc_ll(const Eigen::VectorXf& expectedoutput, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
@@ -116,6 +112,14 @@ namespace MLP
 			lyr[0].destruct();
 			for (un l = 1; l < lyrs; ++l)
 				lyr[l].create(nrns[l], nrns[l - 1]);
+		}
+
+		un get_param_count()
+		{
+			un params = 0;
+			for (un l = 1; l < lyrs; ++l)
+				params += nrns[l] + nrns[l] * nrns[l - 1];
+			return params;
 		}
 
 		void random()
