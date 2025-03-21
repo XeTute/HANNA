@@ -1,10 +1,13 @@
-# Hello, Friend | ہیلو، دوست | 朋友你好
+# HANNA
+HANNA is a one of my largest projects. It's a library I've been developing currently which implements
 
-## What's HANNA
-HANNA, short for Hamzah's Artificial Neural Network Architecture, is a headers-only, native C++ library designed for easily inferencing and training HANNA and MLP models.  
+- MLPs: HANNA/MLP.hpp; both `LAYER` and `MLP` classes
 
-> [!IMPORTANT]
-> HANNA is still in active development. Please do not currently consider it for production enviroments. See reasons below.
+using Eigen. I'll port it to any OpenCL3 compatible device using IDT after I get a version out which can be used to professionally train large-scale network efficiently.
 
-In order to use this "library", you require Eigen-3.4.0. Please link it accordingly.  
-Currently, only a MLP is implemented. You can see a demo in main.cpp.
+---
+# Our Apps & Socials
+[Chat with our Assistant](https://xetute.com/) | [Support us Financially](https://ko-fi.com/XeTute) | [Visit our GitHub](https://github.com/XeTute)  
+
+Long live the Islamic Republic of Pakistan; Glory to the Islamic Republic of Pakistan 🇵🇰  
+![The Flag of the Islamic Federal Republic of Pakistan](https://upload.wikimedia.org/wikipedia/commons/3/32/Flag_of_Pakistan.svg)
