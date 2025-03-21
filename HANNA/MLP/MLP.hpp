@@ -63,9 +63,9 @@ namespace MLP
 		// ll last layer, comments are for my own understanding of gradient descent
 		void graddesc_ll(const Eigen::VectorXf& expectedoutput, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
 		{
-			deltall = neuron;
-			neuron = deltall.unaryExpr(activationdr);
-			neuron = (deltall - expectedoutput).cwiseProduct(neuron);
+			deltall = neuron - expectedoutput;
+			neuron = neuron.unaryExpr(activationdr);
+			neuron = deltall.cwiseProduct(neuron);
 			neuron *= lr;
 
 			bias -= neuron;
