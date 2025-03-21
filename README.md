@@ -1,5 +1,5 @@
 # HANNA
-HANNA is a one of my largest projects. It's a library I've been developing currently which implements
+HANNA is a one of my largest projects. It's a library I've been developing which currently implements
 
 - MLPs: HANNA/MLP.hpp; both `LAYER` and `MLP` classes
 
