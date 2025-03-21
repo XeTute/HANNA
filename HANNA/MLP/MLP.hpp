@@ -1,8 +1,10 @@
-#include <cstdint>
 #include <cmath>
+#include <cstdint>
+#include <Eigen/Eigen>
+#include <exception>
+#include <fstream>
 #include <random>
 #include <vector>
-#include <Eigen/Eigen>
 
 using un = std::size_t;   // un unsigned number
 using sn = std::intmax_t; // sn signed   number
@@ -85,6 +87,9 @@ namespace MLP
 			weight -= neuron * lastinput.transpose();
 		}
 
+		auto& getweight() { return weight; }
+		auto& getbias() { return bias; }
+
 		Eigen::VectorXf getdelta_fll() const // fll for last layer
 		{ return weight.transpose() * neuron; }
 
@@ -100,6 +105,8 @@ namespace MLP
 
 	public:
 
+		std::exception lastexception;
+
 		MLP() : lyr(), nrns(0), lyrs(0) {}
 		MLP(std::vector<un> neurons) { birth(neurons); }
 
@@ -112,6 +119,49 @@ namespace MLP
 			lyr[0].destruct();
 			for (un l = 1; l < lyrs; ++l)
 				lyr[l].create(nrns[l], nrns[l - 1]);
+		}
+
+		bool save(std::string filename)
+		{
+			try
+			{
+				std::ofstream w(filename, std::ios::binary);
+				if (!w.is_open()) throw std::runtime_error("Failed to open file \"" + filename + "\".");
+				un datasize = sizeof(lyr[1].report()[0]);
+
+				w.write((char*)&lyrs, sizeof(un));
+				w.write((char*)&nrns[0], lyrs * sizeof(un));
+
+				for (un l = 1; l < lyrs; ++l)
+				{
+					w.write((char*)&lyr[l].getbias()[0], nrns[l] * datasize);
+					w.write((char*)&lyr[l].getweight()(0, 0), nrns[l] * nrns[l - 1] * datasize);
+				}
+				return true;
+			}
+			catch (const std::exception& e) { lastexception = e; return false; }
+		}
+
+		bool load(std::string filename)
+		{
+			try
+			{
+				std::ifstream r(filename, std::ios::binary);
+				if (!r.is_open()) throw std::runtime_error("Failed to open file \"" + filename + "\".");
+				un datasize = sizeof(lyr[1].report()[0]);
+
+				r.read((char*)&lyrs, sizeof(un));
+				nrns.resize(lyrs); r.read((char*)&nrns[0], lyrs * sizeof(un));
+				birth(nrns);
+
+				for (un l = 1; l < lyrs; ++l)
+				{
+					r.read((char*)&lyr[l].getbias()[0], nrns[l] * datasize);
+					r.read((char*)&lyr[l].getweight()(0, 0), nrns[l] * nrns[l - 1] * datasize);
+				}
+				return true;
+			}
+			catch (const std::exception& e) { lastexception = e; return false; }
 		}
 
 		un get_param_count()
