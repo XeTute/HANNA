@@ -36,12 +36,6 @@ int main()
     data[0] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(2));
     data[1] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(1));
 
-    data[0][0] << 0.f, 0.f; data[0][1] << 0.f, 1.f;
-    data[0][2] << 1.f, 0.f; data[0][3] << 1.f, 1.f;
-
-    data[1][0] << 0.f; data[1][1] << 1.f;
-    data[1][2] << 1.f; data[1][3] << 0.f;
-
     start();
     if (!mlp.load("XOR.mlp"))
     {
@@ -71,7 +65,9 @@ int main()
         std::cout << "(" << data[0][s](0) << " & " << data[0][s](1) << ") => " << value << '\n';
     }
     std::cout << "Error: " << error << std::endl;
-	mlp.save("XOR.mlp");
+	
+	if (!mlp.save("XOR.mlp"))
+        std::cout << "Failed saving: " << mlp.lastexception.what() << std::endl;
 
     return 0;
 }
