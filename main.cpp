@@ -10,7 +10,7 @@ timepoint tp;
 void start() { tp = hrc::now(); }
 void display()
 {
-    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(hrc::now() - tp).count() << "ms.\n";
+    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(hrc::now() - tp).count() << "ms";
 }
 
 // Sigmoid
@@ -28,10 +28,6 @@ int main()
     Eigen::initParallel();
     std::cout << "Eigen: THREADS_" << Eigen::nbThreads() << " & " << Eigen::SimdInstructionSetsInUse() << '\n';
 
-    MLP::MLP mlp({ 2, 2, 1 });
-    mlp.random();
-    std::cout << "Parameter Count: " << mlp.get_param_count() << '\n';
-
     std::vector<std::vector<Eigen::VectorXf>> data(2);
     data[0] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(2));
     data[1] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(1));
@@ -43,25 +39,18 @@ int main()
     data[1][2] << 1.f; data[1][3] << 0.f;
 
     start();
-    if (!mlp.load("XOR.MLP.bin"))
+    MLP::MLP mlp({ 2, 3, 1 });
+    mlp.random();
+    for (un e = 0; e < 100000; ++e)
     {
-		std::cout << "Failed loading: " << mlp.lastexception.what() << '\n';
-
-		// Failed loading will invalidate model parameters
-		mlp.birth({ 2, 2, 1 });
-		mlp.random();
-        for (un e = 0; e < 100000; ++e)
+        for (un s = 0; s < 4; ++s)
         {
-            for (un s = 0; s < 4; ++s)
-            {
-                mlp.forward(data[0][s], activation);
-                mlp.graddesc(data[0][s], data[1][s], activationdr, 0.1f);
-            }
+            mlp.forward(data[0][s], activation);
+            mlp.graddesc(data[0][s], data[1][s], activationdr, 0.1f);
         }
-		std::cout << "Following measures are for how long it took to train the model.\n";
     }
-	else std::cout << "Following measures are for how long it took to load the model.\n";
     display();
+    std::cout << " to initialize & train " << mlp.get_param_count() << " parameters.\n";
 
     float error = 0.f;
     for (un s = 0; s < 4; ++s)
@@ -71,10 +60,6 @@ int main()
         std::cout << "(" << data[0][s](0) << " & " << data[0][s](1) << ") => " << value << '\n';
     }
     std::cout << "Error: " << error << std::endl;
-	
-	if (error > 0.f)
-        if (!mlp.save("XOR.MLP.bin"))
-            std::cout << "Failed saving: " << mlp.lastexception.what() << std::endl;
 
     return 0;
 }
