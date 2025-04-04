@@ -13,7 +13,7 @@ namespace MLP
 {
 	class LAYER
 	{
-		Eigen::VectorXf neuron, deltall;
+		Eigen::VectorXf neuron;
 
 		un nrns, nrnsll; // nrnrs neurons, nrnsll neurons last layer
 
@@ -22,7 +22,7 @@ namespace MLP
 		Eigen::VectorXf bias;
 		Eigen::MatrixXf weight;
 
-		LAYER() : neuron(), bias(), deltall(), weight(), nrns(0), nrnsll(0) {};
+		LAYER() : neuron(), bias(), weight(), nrns(0), nrnsll(0) {};
 		LAYER(un neurons, un neuronslastlayer) { create(neurons, neuronslastlayer); }
 
 		void create(un neurons, un neuronslastlayer)
@@ -76,26 +76,7 @@ namespace MLP
 			return report();
 		}
 
-		void disable_graddesc_ll() { deltall.resize(0); }
-
-		// ll last layer, comments are for my own understanding of gradient descent
-		void graddesc_ll(const Eigen::VectorXf& expectedoutput, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
-		{
-			deltall = neuron - expectedoutput; // Get detla
-			neuron = neuron.unaryExpr(activationdr); // neurons = derivative(neurons)
-			neuron = deltall.cwiseProduct(neuron); // neurons = (elem wise) delta * neurons
-			neuron *= lr;
-
-			bias -= neuron;
-			weight -= neuron * lastinput.transpose();
-
-			/*
-			  Breaking down
-			*/
-		}
-
-		// hl hidden layer
-		void graddesc_hl(const Eigen::VectorXf& nexterror, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
+		void graddesc(const Eigen::VectorXf& nexterror, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
 		{
 			// First Backprop \\ Calculate Errors
 			neuron = neuron.unaryExpr(activationdr);
@@ -212,10 +193,10 @@ namespace MLP
 		void graddesc(const Eigen::VectorXf& lastinput, const Eigen::VectorXf& expectedoutput, float (*activationdr) (const float&), float lr)
 		{
 			un mintwo = lyrs - 2;
-			lyr[lyrs - 1].graddesc_ll(expectedoutput, lyr[mintwo].report(), activationdr, lr);
+			lyr[lyrs - 1].graddesc(lyr[lyrs - 1].report() - expectedoutput, lyr[mintwo].report(), activationdr, lr);
 			for (un l = mintwo; l > 1; --l)
-				lyr[l].graddesc_hl(lyr[l + 1].getdelta_fll(), lyr[l - 1].report(), activationdr, lr);
-			lyr[1].graddesc_hl(lyr[2].getdelta_fll(), lastinput, activationdr, lr);
+				lyr[l].graddesc(lyr[l + 1].getdelta_fll(), lyr[l - 1].report(), activationdr, lr);
+			lyr[1].graddesc(lyr[2].getdelta_fll(), lastinput, activationdr, lr);
 		}
 
 		void kill()
