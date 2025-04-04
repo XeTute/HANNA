@@ -13,12 +13,14 @@ namespace MLP
 {
 	class LAYER
 	{
-		Eigen::VectorXf neuron, bias, deltall;
-		Eigen::MatrixXf weight;
+		Eigen::VectorXf neuron, deltall;
 
 		un nrns, nrnsll; // nrnrs neurons, nrnsll neurons last layer
 
 	public:
+
+		Eigen::VectorXf bias;
+		Eigen::MatrixXf weight;
 
 		LAYER() : neuron(), bias(), deltall(), weight(), nrns(0), nrnsll(0) {};
 		LAYER(un neurons, un neuronslastlayer) { create(neurons, neuronslastlayer); }
@@ -49,8 +51,22 @@ namespace MLP
 
 		void forward(const Eigen::VectorXf& input, float (*activation)(const float&))
 		{
-			neuron = weight * input + bias;
-			neuron = neuron.unaryExpr(activation);
+			/*
+			neuron & bias: one-dim vector of nrns size
+			input: one-dim vector of nrns last layer size
+			weight: two-dim matrix of nrns x nrns last layer size
+
+            the line below verbose would be:
+			
+			for (un nrn = 0; nrn < nrns; ++nrn)
+				neuron[nrn] = bias[nrn];
+				for (un nrnll = 0; nrnll < nrnsll; ++nrnll)
+					neuron[nrn] += weight[nrn][nrnll] * input[nrnll];
+
+			Kinda does a nested loop-ish thing (mentally, I know about allat SIMD & omp), and that's mathematically semicorrect (as far as I know).
+			*/
+
+			neuron = (weight * input + bias).unaryExpr(activation);
 		}
 
 		Eigen::VectorXf& report() { return neuron; }
@@ -65,13 +81,17 @@ namespace MLP
 		// ll last layer, comments are for my own understanding of gradient descent
 		void graddesc_ll(const Eigen::VectorXf& expectedoutput, const Eigen::VectorXf& lastinput, float (*activationdr) (const float&), float lr)
 		{
-			deltall = neuron - expectedoutput;
-			neuron = neuron.unaryExpr(activationdr);
-			neuron = deltall.cwiseProduct(neuron);
+			deltall = neuron - expectedoutput; // Get detla
+			neuron = neuron.unaryExpr(activationdr); // neurons = derivative(neurons)
+			neuron = deltall.cwiseProduct(neuron); // neurons = (elem wise) delta * neurons
 			neuron *= lr;
 
 			bias -= neuron;
 			weight -= neuron * lastinput.transpose();
+
+			/*
+			  Breaking down
+			*/
 		}
 
 		// hl hidden layer
@@ -86,9 +106,6 @@ namespace MLP
 			bias -= neuron;
 			weight -= neuron * lastinput.transpose();
 		}
-
-		auto& getweight() { return weight; }
-		auto& getbias() { return bias; }
 
 		Eigen::VectorXf getdelta_fll() const // fll for last layer
 		{ return weight.transpose() * neuron; }
@@ -134,8 +151,8 @@ namespace MLP
 
 				for (un l = 1; l < lyrs; ++l)
 				{
-					w.write((char*)&lyr[l].getbias()[0], nrns[l] * datasize);
-					w.write((char*)&lyr[l].getweight()(0, 0), nrns[l] * nrns[l - 1] * datasize);
+					w.write((char*)&lyr[l].bias[0], nrns[l] * datasize);
+					w.write((char*)&lyr[l].weight(0, 0), nrns[l] * nrns[l - 1] * datasize);
 				}
 				return true;
 			}
@@ -156,8 +173,8 @@ namespace MLP
 
 				for (un l = 1; l < lyrs; ++l)
 				{
-					r.read((char*)&lyr[l].getbias()[0], nrns[l] * datasize);
-					r.read((char*)&lyr[l].getweight()(0, 0), nrns[l] * nrns[l - 1] * datasize);
+					r.read((char*)&lyr[l].bias[0], nrns[l] * datasize);
+					r.read((char*)&lyr[l].weight(0, 0), nrns[l] * nrns[l - 1] * datasize);
 				}
 				return true;
 			}
