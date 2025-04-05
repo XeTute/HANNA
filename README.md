@@ -1,5 +1,5 @@
 # HANNA
-HANNA is my largest project. It's in my fav language, C++, and it only uses Eigen (and soon OpenCL3 through IDT too, also my library) and intended for building Multi Layer Perceptron networks. It has a simply API to create, train, save, load, and inference MLPs without bloated use of libraries (since I only use std and Eigen) like PyTorch or TensorFlow, which makes it ideal for embedded devices or performance-citical enviroments.  
+HANNA is my largest project. It's in my fav language, C++, and only uses Eigen (and soon OpenCL3 through IDT too, also my library) and is intended for building Multi Layer Perceptron networks. It has a simple API to create, train, save, load, and inference MLPs without bloated use of libraries (since I only use std and Eigen) like PyTorch or TensorFlow do, which makes it ideal for embedded devices or performance-citical enviroments.  
 
 To demonstrate how simple it is, here's an example usage for the famous XOR problem:
 ```cpp
