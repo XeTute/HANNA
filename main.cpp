@@ -1,17 +1,6 @@
 #include <iostream>
-#include <chrono>
+#include <string>
 #include "HANNA/MLP/MLP.hpp"
-
-using hrc = std::chrono::high_resolution_clock;
-using timepoint = hrc::time_point;
-
-timepoint tp;
-
-void start() { tp = hrc::now(); }
-void display()
-{
-    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(hrc::now() - tp).count() << "ms";
-}
 
 // Sigmoid
 float activation(const float& x) { return 1.0f / (1.0f + std::exp(-x)); }
@@ -21,45 +10,135 @@ float activationdr(const float& x)
     return sigmoid * (1.0f - sigmoid);
 }
 
+void print(std::string _this) { std::cout << ">> " << _this << '\n'; }
+void eraseable(std::string _this) { std::cout << ">> " << _this; }
+void erase(std::string _this) { std::cout << "\r>> " << _this; }
+
+std::string input(std::string str) // That's the only thing I like about Py
+{
+    std::cout << ">_ " + str;
+    std::getline(std::cin, str); // str isn't a ref
+    return str;
+}
+
+std::vector<std::vector<std::string>> load_json(std::string path) // 10 min work, naive but works for this dataset
+{
+    std::vector<std::vector<std::string>> data(0);
+    std::ifstream r(path);
+    std::string line("");
+
+    if (!r.good()) std::cout << "\rFailed to load data from " << path << ", expect a crash.";
+    while (std::getline(r, line))
+    {
+        const std::size_t starts[3] = { line.find("\"input\": \""), line.find("\"output\": \"") };
+
+        if (starts[0] != std::string::npos)
+        {
+            line = line.substr(starts[0] + std::string("\"input\": \"").size());
+            line = line.substr(0, line.size() - 2);
+            data.push_back(std::vector<std::string>({ line }));
+        }
+        else if (starts[1] != std::string::npos)
+        {
+            line = line.substr(starts[1] + std::string("\"output\": \"").size());
+            line = line.substr(0, line.size() - 1);
+            data[data.size() - 1].push_back(line);
+        }
+    }
+    return data;
+}
+
+Eigen::VectorXf str_to_ascii_vals(const std::string& str, std::size_t vecsize)
+{
+    Eigen::VectorXf vec; vec.resize(vecsize); vec.setZero();
+    std::size_t strsize = std::min(str.size(), vecsize);
+
+    for (std::size_t x = 0; x < strsize; ++x)
+        vec(x) = float(int(str[x]));
+    return vec;
+}
+
 int main()
 {
     omp_set_num_threads(6);
     Eigen::setNbThreads(6);
     Eigen::initParallel();
-    std::cout << "Eigen: THREADS_" << Eigen::nbThreads() << " & " << Eigen::SimdInstructionSetsInUse() << '\n';
 
-    std::vector<std::vector<Eigen::VectorXf>> data(2);
-    data[0] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(2));
-    data[1] = std::vector<Eigen::VectorXf>(4, Eigen::VectorXf(1));
+    // Config
+    const std::vector<std::size_t> scale({ 128, 64, 32, 4 });
+    const unsigned short epochs = 10;
+    const float learning_rate = 0.1f;
 
-    data[0][0] << 0.f, 0.f; data[0][1] << 0.f, 1.f;
-    data[0][2] << 1.f, 0.f; data[0][3] << 1.f, 1.f;
-
-    data[1][0] << 0.f; data[1][1] << 1.f;
-    data[1][2] << 1.f; data[1][3] << 0.f;
-
-    start();
-    MLP::MLP mlp({ 2, 3, 1 });
-    mlp.random();
-    for (un e = 0; e < 100000; ++e)
+    MLP::MLP net(scale);
+    
+    if (!net.load("emotionclassifier.mlp.bin"))
     {
-        for (un s = 0; s < 4; ++s)
+        print("Failed to load model from disk: " + std::string(net.lastexception.what()));
+
+        net.birth(scale);
+        net.random();
+
+        eraseable("Loading dataset...");
+        std::vector<std::vector<std::string>> datastr = load_json("data.json");
+        std::vector<std::vector<Eigen::VectorXf>> datanum(datastr.size(), std::vector<Eigen::VectorXf>(datastr[0].size()));
+        erase("Loaded dataset.   \n");
+
+        eraseable("Formatting dataset...");
+        std::size_t rows = datastr.size();
+        for (std::size_t row = 0; row < rows; ++row)
         {
-            mlp.forward(data[0][s], activation);
-            mlp.graddesc(data[0][s], data[1][s], activationdr, 0.1f);
-        }
-    }
-    display();
-    std::cout << " to initialize & train " << mlp.get_param_count() << " parameters.\n";
+            const std::string input  = datastr[row][0];
+            const std::string output = datastr[row][1];
 
-    float error = 0.f;
-    for (un s = 0; s < 4; ++s)
-    {
-        float value = mlp.report(data[0][s], activation)(0);
-        error += (data[1][s](0) - value) / 4;
-        std::cout << "(" << data[0][s](0) << " & " << data[0][s](1) << ") => " << value << '\n';
+            Eigen::VectorXf numinp = str_to_ascii_vals(datastr[row][0], 128);
+            datanum[row][0] = numinp;
+
+            Eigen::VectorXf numout; numout.resize(4); numout.setZero();
+                 if (output == "Sad"    ) numout(0) = 1.f;
+            else if (output == "Happy"  ) numout(1) = 1.f;
+            else if (output == "Neutral") numout(2) = 1.f;
+            else if (output == "Angry"  ) numout(3) = 1.f;
+            datanum[row][1] = numout;
+        }
+        erase("Formatted dataset.   \n");
+
+        eraseable("Training model: Completed Epoch 0 / " + std::to_string(epochs) + ".");
+        for (unsigned short epoch = 0; epoch < epochs; ++epoch)
+        {
+            for (std::size_t sample = 0; sample < rows; ++sample)
+            {
+                net.forward(datanum[sample][0], activation);
+                net.graddesc(datanum[sample][0], datanum[sample][1], activationdr, learning_rate);
+            }
+            erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs) + ".");
+        }
+        erase("Trained model.                          \n");
+
+        eraseable("Saving model...");
+        if (net.save("emotionclassifier.mlp.bin")) erase("Saved model successfully.");
+        else erase("Failed to save model: " + std::string(net.lastexception.what()));
+        std::cout << '\n';
     }
-    std::cout << "Error: " << error << std::endl;
+
+    print("--- Inference ---");
+    while (true)
+    {
+        std::string prompt = input("");
+        Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, 128), activation);
+
+        std::cout << ">> Classified as: ";
+        if (output(0) >= 0.5f) std::cout << "Sad(" << output(0) << ") ";
+        if (output(1) >= 0.5f) std::cout << "Happy(" << output(1) << ") ";
+        if (output(2) >= 0.5f) std::cout << "Neutral(" << output(2) << ") ";
+        if (output(3) >= 0.5f) std::cout << "Angry(" << output(3) << ") ";
+
+        std::cout << "\n>> All distributions: "
+                  << "Sad(" << output(0)
+                  << "), Happy(" << output(1)
+                  << "), Neutral(" << output(2)
+                  << "), Angry(" << output(3) << ')';
+        std::cout << "\n---\n";
+    }
 
     return 0;
 }
