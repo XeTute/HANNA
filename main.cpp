@@ -1,14 +1,8 @@
 #include <iostream>
 #include <string>
-#include "HANNA/MLP/MLP.hpp"
 
-// Sigmoid
-float activation(const float& x) { return 1.0f / (1.0f + std::exp(-x)); }
-float activationdr(const float& x)
-{
-    float sigmoid = activation(x);
-    return sigmoid * (1.0f - sigmoid);
-}
+#include "HANNA/MLP/MLP.hpp"
+#include "HANNA/activations.cpp"
 
 void print(std::string _this) { std::cout << ">> " << _this << '\n'; }
 void eraseable(std::string _this) { std::cout << ">> " << _this; }
@@ -54,7 +48,7 @@ Eigen::VectorXf str_to_ascii_vals(const std::string& str, std::size_t vecsize)
     std::size_t strsize = std::min(str.size(), vecsize);
 
     for (std::size_t x = 0; x < strsize; ++x)
-        vec(x) = float(int(str[x]));
+        vec(x) = float(int(str[x])) / 128.f;
     return vec;
 }
 
@@ -65,9 +59,9 @@ int main()
     Eigen::initParallel();
 
     // Config
-    const std::vector<std::size_t> scale({ 128, 64, 32, 4 });
-    const unsigned short epochs = 10;
-    const float learning_rate = 0.1f;
+    const std::vector<std::size_t> scale({ 128, 32, 4 });
+    const unsigned short epochs = 100;
+    const float learning_rate = 1e-2f;
 
     MLP::MLP net(scale);
     
@@ -107,16 +101,41 @@ int main()
         {
             for (std::size_t sample = 0; sample < rows; ++sample)
             {
-                net.forward(datanum[sample][0], activation);
-                net.graddesc(datanum[sample][0], datanum[sample][1], activationdr, learning_rate);
+                net.forward(datanum[sample][0], sigmoid);
+                net.graddesc(datanum[sample][0], datanum[sample][1], sigmoid_derivative, learning_rate);
             }
             erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs) + ".");
         }
-        erase("Trained model.                          \n");
+        erase("Trained model.                              \n");
 
         eraseable("Saving model...");
         if (net.save("emotionclassifier.mlp.bin")) erase("Saved model successfully.");
         else erase("Failed to save model: " + std::string(net.lastexception.what()));
+        std::cout << '\n';
+
+        print("--- Absolute Eval ---");
+        eraseable("Got 0 / " + std::to_string(rows) + " wrong.");
+        std::size_t wrong = 0;
+        for (std::size_t row = 0; row < rows; ++row)
+        {
+            Eigen::VectorXf out = net.report(datanum[row][0], sigmoid);
+            unsigned short eoid = 0;
+
+            for (unsigned short cid = 0; cid < 4; ++cid)
+            {
+                if (datanum[row][1](cid) == 1.f)
+                {
+                    eoid = cid;
+                    break;
+                }
+            }
+
+            if (out(eoid) < 0.25f)
+            {
+                ++wrong;
+                erase("Got " + std::to_string(wrong) + " / " + std::to_string(rows) + " wrong.");
+            }
+        }
         std::cout << '\n';
     }
 
@@ -124,7 +143,7 @@ int main()
     while (true)
     {
         std::string prompt = input("");
-        Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, 128), activation);
+        Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, 128), sigmoid);
 
         std::cout << ">> Classified as: ";
         if (output(0) >= 0.5f) std::cout << "Sad(" << output(0) << ") ";
