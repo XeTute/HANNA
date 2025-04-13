@@ -2,7 +2,7 @@
 #include <string>
 
 #include "HANNA/MLP/MLP.hpp"
-#include "HANNA/activations.cpp"
+#include "HANNA/mathfunctions.cpp"
 
 void print(std::string _this) { std::cout << ">> " << _this << '\n'; }
 void eraseable(std::string _this) { std::cout << ">> " << _this; }
@@ -52,6 +52,24 @@ Eigen::VectorXf str_to_ascii_vals(const std::string& str, std::size_t vecsize)
     return vec;
 }
 
+unsigned short get_pred_nrn_num(const Eigen::VectorXf& vec)
+{
+    unsigned short id = 0;
+    float value = 0.f;
+    unsigned short size = vec.size();
+
+    for (unsigned short x = 0; x < size; ++x)
+    {
+        if (vec(x) > value)
+        {
+            id = x;
+            value = vec(x);
+        }
+    }
+
+    return id;
+}
+
 int main()
 {
     omp_set_num_threads(6);
@@ -59,12 +77,13 @@ int main()
     Eigen::initParallel();
 
     // Config
-    const std::vector<std::size_t> scale({ 128, 32, 4 });
+    const std::vector<std::size_t> scale({ 128, 61, 4 });
     const unsigned short epochs = 100;
-    const float learning_rate = 1e-2f;
+    const float learning_rate = 0.01f;
 
     MLP::MLP net(scale);
-    
+    print("Expected model parameter count: " + std::to_string(net.get_param_count()));
+
     if (!net.load("emotionclassifier.mlp.bin"))
     {
         print("Failed to load model from disk: " + std::string(net.lastexception.what()));
@@ -119,18 +138,8 @@ int main()
         for (std::size_t row = 0; row < rows; ++row)
         {
             Eigen::VectorXf out = net.report(datanum[row][0], sigmoid);
-            unsigned short eoid = 0;
 
-            for (unsigned short cid = 0; cid < 4; ++cid)
-            {
-                if (datanum[row][1](cid) == 1.f)
-                {
-                    eoid = cid;
-                    break;
-                }
-            }
-
-            if (out(eoid) < 0.25f)
+            if (out(get_pred_nrn_num(out)) < 0.4f)
             {
                 ++wrong;
                 erase("Got " + std::to_string(wrong) + " / " + std::to_string(rows) + " wrong.");
@@ -144,12 +153,13 @@ int main()
     {
         std::string prompt = input("");
         Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, 128), sigmoid);
+        unsigned short strongest_neuron = get_pred_nrn_num(softmax(output));
 
         std::cout << ">> Classified as: ";
-        if (output(0) >= 0.5f) std::cout << "Sad(" << output(0) << ") ";
-        if (output(1) >= 0.5f) std::cout << "Happy(" << output(1) << ") ";
-        if (output(2) >= 0.5f) std::cout << "Neutral(" << output(2) << ") ";
-        if (output(3) >= 0.5f) std::cout << "Angry(" << output(3) << ") ";
+             if (strongest_neuron == 0) std::cout << "Sad(" << output(0) << ") ";
+        else if (strongest_neuron == 1) std::cout << "Happy(" << output(1) << ") ";
+        else if (strongest_neuron == 2) std::cout << "Neutral(" << output(2) << ") ";
+        else if (strongest_neuron == 3) std::cout << "Angry(" << output(3) << ") ";
 
         std::cout << "\n>> All distributions: "
                   << "Sad(" << output(0)
