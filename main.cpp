@@ -15,6 +15,22 @@ std::string input(std::string str) // That's the only thing I like about Py
     return str;
 }
 
+std::string remove_instructions(std::string path)
+{
+    std::string cleaned(path.substr(0, path.find(".json")) + "_noinstruction.json");
+    std::string buffer("");
+    std::ifstream r(path);
+    std::ofstream w(cleaned);
+
+    while (std::getline(r, buffer))
+    {
+        if (buffer.find("\"instruction\": ") == std::string::npos)
+            w << buffer << '\n';
+    }
+
+    return cleaned;
+}
+
 std::vector<std::vector<std::string>> load_json(std::string path) // 10 min work, naive but works for this dataset
 {
     std::vector<std::vector<std::string>> data(0);
@@ -56,7 +72,7 @@ unsigned short get_pred_nrn_num(const Eigen::VectorXf& vec)
 {
     unsigned short id = 0;
     float value = 0.f;
-    unsigned short size = vec.size();
+    unsigned short size(vec.size());
 
     for (unsigned short x = 0; x < size; ++x)
     {
@@ -77,24 +93,24 @@ int main()
     Eigen::initParallel();
 
     // Config
-    const std::vector<std::size_t> scale({ 128, 61, 4 });
-    const unsigned short epochs = 100;
-    const float learning_rate = 0.01f;
+    const std::size_t context_length = 128;
+    const std::vector<std::size_t> scale({ context_length, 16, 64, 4 });
+    unsigned short epochs = 10;
+    float learning_rate = 1e-1f;
 
-    MLP::MLP net(scale);
-    print("Expected model parameter count: " + std::to_string(net.get_param_count()));
-
+    MLP::MLP net;
     if (!net.load("emotionclassifier.mlp.bin"))
     {
-        print("Failed to load model from disk: " + std::string(net.lastexception.what()));
-
         net.birth(scale);
         net.random();
+
+        print("Failed to load model from disk: " + std::string(net.lastexception.what()));
+        print("Will train a MLP with " + std::to_string(net.get_param_count()) + " params.");
 
         eraseable("Loading dataset...");
         std::vector<std::vector<std::string>> datastr = load_json("data.json");
         std::vector<std::vector<Eigen::VectorXf>> datanum(datastr.size(), std::vector<Eigen::VectorXf>(datastr[0].size()));
-        erase("Loaded dataset.   \n");
+        erase("Loaded dataset with " + std::to_string(datastr.size()) + " rows.\n");
 
         eraseable("Formatting dataset...");
         std::size_t rows = datastr.size();
@@ -103,7 +119,7 @@ int main()
             const std::string input  = datastr[row][0];
             const std::string output = datastr[row][1];
 
-            Eigen::VectorXf numinp = str_to_ascii_vals(datastr[row][0], 128);
+            Eigen::VectorXf numinp = str_to_ascii_vals(datastr[row][0], context_length);
             datanum[row][0] = numinp;
 
             Eigen::VectorXf numout; numout.resize(4); numout.setZero();
@@ -115,36 +131,42 @@ int main()
         }
         erase("Formatted dataset.   \n");
 
+        // Train
         eraseable("Training model: Completed Epoch 0 / " + std::to_string(epochs) + ".");
+
+        float locallr = learning_rate;
         for (unsigned short epoch = 0; epoch < epochs; ++epoch)
         {
             for (std::size_t sample = 0; sample < rows; ++sample)
             {
                 net.forward(datanum[sample][0], sigmoid);
-                net.graddesc(datanum[sample][0], datanum[sample][1], sigmoid_derivative, learning_rate);
+                net.graddesc(datanum[sample][0], datanum[sample][1], sigmoid_derivative, locallr);
             }
-            erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs) + ".");
+            locallr *= 0.99f;
+            erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs) + " : lr set to " + std::to_string(locallr));
         }
-        erase("Trained model.                              \n");
+        erase("Trained model.                                             \n"); // 50 spaces
 
-        eraseable("Saving model...");
-        if (net.save("emotionclassifier.mlp.bin")) erase("Saved model successfully.");
-        else erase("Failed to save model: " + std::string(net.lastexception.what()));
-        std::cout << '\n';
-
+        // Eval
         print("--- Absolute Eval ---");
         eraseable("Got 0 / " + std::to_string(rows) + " wrong.");
+
         std::size_t wrong = 0;
         for (std::size_t row = 0; row < rows; ++row)
         {
             Eigen::VectorXf out = net.report(datanum[row][0], sigmoid);
 
-            if (out(get_pred_nrn_num(out)) < 0.4f)
+            if (datanum[row][1][get_pred_nrn_num(out)] != 1.0f)
             {
                 ++wrong;
                 erase("Got " + std::to_string(wrong) + " / " + std::to_string(rows) + " wrong.");
             }
         }
+        std::cout << '\n';
+
+        eraseable("Saving model...");
+        if (net.save("emotionclassifier.mlp.bin")) erase("Saved model successfully.");
+        else erase("Failed to save model: " + std::string(net.lastexception.what()));
         std::cout << '\n';
     }
 
@@ -152,7 +174,7 @@ int main()
     while (true)
     {
         std::string prompt = input("");
-        Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, 128), sigmoid);
+        Eigen::VectorXf output = net.report(str_to_ascii_vals(prompt, context_length), sigmoid);
         unsigned short strongest_neuron = get_pred_nrn_num(softmax(output));
 
         std::cout << ">> Classified as: ";
@@ -171,3 +193,9 @@ int main()
 
     return 0;
 }
+
+/*int main()
+{
+    std::cout << "New filename: " << remove_instructions("data.json") << std::endl;
+    return 0;
+}*/
