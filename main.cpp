@@ -95,7 +95,7 @@ int main()
     // Config
     const std::size_t context_length = 128;
     const std::vector<std::size_t> scale({ context_length, 16, 64, 4 });
-    unsigned short epochs = 10;
+    unsigned short epochs = 20;
     float learning_rate = 1e-1f;
 
     MLP::MLP net;
@@ -134,18 +134,17 @@ int main()
         // Train
         eraseable("Training model: Completed Epoch 0 / " + std::to_string(epochs) + ".");
 
-        float locallr = learning_rate;
         for (unsigned short epoch = 0; epoch < epochs; ++epoch)
         {
             for (std::size_t sample = 0; sample < rows; ++sample)
             {
                 net.forward(datanum[sample][0], sigmoid);
-                net.graddesc(datanum[sample][0], datanum[sample][1], sigmoid_derivative, locallr);
+                net.graddesc(datanum[sample][0], datanum[sample][1], sigmoid_derivative, learning_rate);
             }
-            locallr *= 0.99f;
-            erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs) + " : lr set to " + std::to_string(locallr));
+            learning_rate *= 0.99f;
+            erase("Training model: Completed Epoch " + std::to_string(epoch) + " / " + std::to_string(epochs));
         }
-        erase("Trained model.                                             \n"); // 50 spaces
+        erase("Trained model.                                                  \n"); // 55 spaces
 
         // Eval
         print("--- Absolute Eval ---");
